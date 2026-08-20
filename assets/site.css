@@ -1,0 +1,160 @@
+/* Berklee ESL — shared styles.
+   One stylesheet for the landing page, both section hubs, and the shared pages.
+   Visual language carried over from the Summer 2026 ESL1 site. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:      #1a1a1a;
+  --mid:      #555;
+  --light:    #888;
+  --border:   #ddd;
+  --bg:       #f7f7f5;
+  --card:     #ffffff;
+  --navy:     #1c2b4a;
+  --accent:   #2d5fa6;
+  --accent-lt:#e8eef8;
+  --sage:     #5c7a5e;
+  --sage-lt:  #eaf1ea;
+  --radius:   10px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* header */
+.app-header {
+  background: var(--navy);
+  color: #fff;
+  padding: 14px 28px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.app-header h1 { font-size: 1rem; font-weight: 600; letter-spacing: 0.02em; }
+.app-header span { font-size: 0.8rem; opacity: 0.6; }
+.app-header a { color: #fff; text-decoration: none; }
+.app-header a:hover { text-decoration: underline; }
+
+/* layout */
+.container { max-width: 700px; margin: 0 auto; padding: 56px 24px 80px; }
+.hub-title { font-size: 2rem; font-weight: 700; line-height: 1.2; margin-bottom: 8px; }
+.hub-subtitle { color: var(--mid); font-size: 0.95rem; margin-bottom: 36px; }
+
+.section { margin-bottom: 44px; }
+.section:last-child { margin-bottom: 0; }
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--ink);
+  flex-wrap: wrap;
+}
+.section-title {
+  font-size: 1.25rem; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink);
+}
+.section-note { font-size: 0.8rem; color: var(--mid); }
+
+/* link cards */
+.week-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+.week-list a {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.05s ease;
+}
+.week-list a:hover { border-color: var(--accent); background: var(--accent-lt); }
+.week-list a:active { transform: translateY(1px); }
+.week-num {
+  font-size: 0.8rem; color: var(--light);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.week-title { font-size: 1.1rem; font-weight: 600; color: var(--accent); margin-top: 2px; }
+.week-desc { font-size: 0.9rem; color: var(--mid); margin-top: 4px; }
+
+/* a card that is not a link yet */
+.week-list li.pending > div {
+  background: var(--card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  opacity: 0.75;
+}
+.week-list li.pending .week-title { color: var(--light); }
+
+/* section picker on the landing page */
+.picker { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 44px; }
+@media (max-width: 560px) { .picker { grid-template-columns: 1fr; } }
+.picker a {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 26px 24px;
+  color: var(--ink);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.05s ease;
+}
+.picker a:hover { background: var(--accent-lt); }
+.picker a:active { transform: translateY(1px); }
+.picker a.esl3 { border-top-color: var(--sage); }
+.picker a.esl3:hover { background: var(--sage-lt); }
+.picker .level { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--light); }
+.picker .course { font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
+.picker .blurb { font-size: 0.9rem; color: var(--mid); margin-top: 8px; }
+
+/* about page */
+.portrait {
+  display: block; width: 170px; height: 170px;
+  object-fit: cover; border-radius: 50%;
+  margin: 0 auto 22px; border: 3px solid var(--card);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+}
+.name { font-size: 1.8rem; font-weight: 700; text-align: center; }
+.title { text-align: center; color: var(--mid); font-size: 0.95rem; margin-bottom: 26px; }
+.bio { font-size: 1.05rem; line-height: 1.7; margin-bottom: 10px; }
+.bio-list {
+  list-style: none; display: flex; flex-wrap: wrap; gap: 10px;
+  justify-content: center; margin: 14px 0 28px;
+}
+.bio-list li {
+  background: var(--accent-lt); color: var(--accent);
+  padding: 6px 14px; border-radius: 999px;
+  font-size: 0.92rem; font-weight: 500;
+}
+.contact-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 22px 24px; margin-top: 6px;
+}
+.contact-card h2 {
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--light); margin-bottom: 14px;
+}
+.contact-row { display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.contact-row:last-child { border-bottom: none; }
+.contact-label { flex: 0 0 130px; color: var(--mid); font-size: 0.9rem; }
+.contact-value { flex: 1; font-size: 0.97rem; }
+.contact-value a { color: var(--accent); text-decoration: none; }
+.contact-value a:hover { text-decoration: underline; }
+
+.back-link { display: inline-block; margin-top: 32px; color: var(--accent); text-decoration: none; font-size: 0.95rem; }
+.back-link:hover { text-decoration: underline; }
+
+footer {
+  text-align: center; color: var(--light);
+  font-size: 0.75rem; font-style: italic; padding: 24px;
+}

@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stuff to Track · Berklee ESL</title>
+<style>
+  :root {
+    --ink: #0f1115;
+    --paper: #f6f1e7;
+    --accent: #ff5a36;
+    --accent2: #2b6cb0;
+    --gold: #e6b325;
+    --green: #2f7d4f;
+    --muted: #5a5a60;
+    --navy: #1c2b4a;
+    --site-accent: #2d5fa6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+
+  /* site nav */
+  .site-nav {
+    background: var(--navy);
+    color: #fff;
+    padding: 14px 28px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .site-nav-left { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  .site-nav h1 { font-size: 1rem; font-weight: 600; letter-spacing: 0.02em; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .site-nav span { font-size: 0.8rem; opacity: 0.6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .site-nav-back {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    white-space: nowrap;
+    transition: color 0.15s;
+  }
+  .site-nav-back:hover { color: #fff; }
+
+  body {
+    background:
+      radial-gradient(ellipse at top, #1a1d24 0%, #0a0c10 70%),
+      var(--ink);
+    color: var(--paper);
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    padding: 32px 20px 60px;
+  }
+
+  /* Header */
+  header {
+    max-width: 720px;
+    margin: 0 auto 28px;
+    text-align: center;
+  }
+  header h1 {
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  header h1 .hl {
+    background: var(--accent);
+    color: var(--paper);
+    padding: 0 0.18em;
+  }
+  header p {
+    margin-top: 14px;
+    font-size: clamp(14px, 1.4vw, 18px);
+    color: rgba(246,241,231,0.7);
+    max-width: 34em;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.55;
+  }
+  header p strong {
+    color: var(--paper);
+    font-weight: 800;
+  }
+  header p kbd {
+    background: var(--accent);
+    color: var(--paper);
+    padding: 2px 9px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-weight: 900;
+    font-size: 0.9em;
+    letter-spacing: 0.05em;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  }
+
+  /* Main */
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  /* Workbench bar (file-tabs for switching saved cabinets) */
+  .workbench-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .wb-pill {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(246,241,231,0.08);
+    border: 1px solid rgba(246,241,231,0.18);
+    border-radius: 6px 6px 0 0;
+    overflow: hidden;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .wb-pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .wb-name {
+    background: transparent;
+    border: none;
+    color: rgba(246,241,231,0.72);
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 8px 6px 8px 13px;
+    cursor: pointer;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .wb-name:hover { color: var(--paper); }
+  .wb-pill.active .wb-name { color: #fff; cursor: text; }
+  .wb-delete {
+    background: transparent;
+    border: none;
+    color: rgba(246,241,231,0.35);
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1;
+    padding: 2px 11px 2px 5px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+    font-family: inherit;
+  }
+  .wb-pill:hover .wb-delete, .wb-pill.active .wb-delete { opacity: 1; }
+  .wb-pill.active .wb-delete { color: rgba(255,255,255,0.65); }
+  .wb-delete:hover { color: #fff; }
+  .wb-add {
+    background: transparent;
+    border: 1px dashed rgba(246,241,231,0.3);
+    border-radius: 6px;
+    color: rgba(246,241,231,0.6);
+    font-family: inherit;
+    font-weight: 800;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .wb-add:hover { color: var(--paper); border-color: var(--paper); }
+
+  /* Per-item note button */
+  .page-note {
+    background: transparent;
+    border: none;
+    color: rgba(0,0,0,0.32);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    padding: 0 3px;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+    flex-shrink: 0;
+    font-family: inherit;
+  }
+  .page:hover .page-note { opacity: 0.7; }
+  .page-note:hover { opacity: 1 !important; color: var(--accent2); }
+  .page-note.has-note { opacity: 1; color: var(--accent2); }
+
+  /* Note bottom sheet (half-screen) */
+  .note-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 6000;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    animation: focusFadeIn 0.18s ease;
+  }
+  .note-overlay[hidden] { display: none !important; }
+  .note-sheet {
+    background: linear-gradient(180deg, #f9f4ea 0%, #ebe2cf 100%);
+    color: var(--ink);
+    border-top: 4px solid #1a0e06;
+    border-radius: 12px 12px 0 0;
+    width: 100%;
+    max-width: 680px;
+    height: 50vh;
+    min-height: 280px;
+    padding: 22px 24px 24px;
+    position: relative;
+    box-shadow: 0 -20px 60px rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: noteSlideUp 0.22s cubic-bezier(0.25, 1, 0.3, 1);
+  }
+  @keyframes noteSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .note-close {
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    background: rgba(0,0,0,0.4);
+    color: #f6f1e7;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .note-close:hover { background: rgba(0,0,0,0.7); }
+  .note-item-label {
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    padding-right: 44px;
+    line-height: 1.2;
+  }
+  .note-status {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(15,17,21,0.45);
+  }
+  .note-textarea {
+    flex: 1;
+    width: 100%;
+    resize: none;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .note-textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* Cabinet */
+  .cabinet {
+    position: relative;
+    width: 100%;
+    background:
+      repeating-linear-gradient(90deg, rgba(0,0,0,0.06) 0 1px, transparent 1px 14px),
+      linear-gradient(180deg, #4a2f1c 0%, #2e1c0f 100%);
+    border: 6px solid #1a0e06;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.55), inset 0 0 0 2px rgba(255,255,255,0.04);
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-auto-rows: minmax(100px, 1fr);
+    gap: 8px;
+  }
+  .drawer {
+    position: relative;
+    background: linear-gradient(180deg, #1b0f08 0%, #100802 100%);
+    border-radius: 3px;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.7);
+    min-height: 100px;
+  }
+  .drawer-face {
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(180deg, rgba(0,0,0,0.04) 0 1px, transparent 1px 7px),
+      linear-gradient(180deg, #d4a76a 0%, #b0843f 100%);
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a0e06;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-size: clamp(11px, 1.1vw, 16px);
+    text-align: center;
+    padding: 0 22px;
+    transition: transform 0.5s cubic-bezier(0.25, 1, 0.3, 1);
+    z-index: 2;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -3px 8px rgba(0,0,0,0.25);
+    will-change: transform;
+  }
+  .drawer-face::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 42%;
+    max-width: 70px;
+    height: 7px;
+    background: linear-gradient(180deg, #c89456 0%, #a87436 100%);
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+  .drawer-face::after {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border: 1px solid rgba(0,0,0,0.16);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .edit-btn {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: rgba(0,0,0,0.4);
+    color: rgba(246,241,231,0.95);
+    border: none;
+    padding: 3px 9px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-family: inherit;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 3;
+  }
+  .drawer:hover .edit-btn { opacity: 1; }
+  .edit-btn:hover { background: rgba(0,0,0,0.7); }
+  .drawer-folder {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #b88a55 0%, #8c6435 100%);
+    padding: 30px 5px 6px 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-radius: 3px;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+    z-index: 1;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.4) transparent;
+    overscroll-behavior: contain;
+  }
+  .drawer-folder::-webkit-scrollbar { width: 5px; }
+  .drawer-folder::-webkit-scrollbar-track { background: transparent; }
+  .drawer-folder::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.35); border-radius: 3px; }
+  .drawer-folder::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.6); }
+  .drawer.has-overflow .drawer-folder { padding-bottom: 14px; }
+  .drawer.has-overflow::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    right: 9px;
+    bottom: 4px;
+    height: 14px;
+    background: linear-gradient(180deg, transparent, rgba(0,0,0,0.45));
+    pointer-events: none;
+    z-index: 1;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+  }
+  .page {
+    background: linear-gradient(180deg, #f9f4ea 0%, #ebe2cf 100%);
+    color: #0f1115;
+    padding: 4px 6px 4px 8px;
+    font-size: clamp(11px, 1vw, 14px);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    border-left: 3px solid #ff5a36;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+  }
+  .page-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: text;
+  }
+  .page-delete {
+    background: transparent;
+    border: none;
+    color: rgba(0,0,0,0.4);
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 900;
+    padding: 0 4px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+    flex-shrink: 0;
+    font-family: inherit;
+  }
+  .page:hover .page-delete { opacity: 0.7; }
+  .page-delete:hover { opacity: 1 !important; color: #b22; }
+  .page-edit-input {
+    flex: 1;
+    background: white;
+    border: 1px solid var(--accent);
+    outline: none;
+    padding: 1px 5px;
+    border-radius: 2px;
+    font-size: inherit;
+    font-weight: 700;
+    color: var(--ink);
+    font-family: inherit;
+    letter-spacing: inherit;
+    min-width: 0;
+  }
+  .drawer.editing .drawer-face { transform: translateY(-105%); }
+
+  /* Drawer color variants */
+  .drawer-color-orange .drawer-face { background: linear-gradient(180deg, #ff8866 0%, #c44012 100%); color: #fff; }
+  .drawer-color-orange .drawer-face::before { background: linear-gradient(180deg, #d96b3f, #a3300a); }
+  .drawer-color-blue .drawer-face { background: linear-gradient(180deg, #6aa6dd 0%, #1d4f80 100%); color: #fff; }
+  .drawer-color-blue .drawer-face::before { background: linear-gradient(180deg, #4986b8, #133a5e); }
+  .drawer-color-gold .drawer-face { background: linear-gradient(180deg, #f5cd5a 0%, #b8841d 100%); color: #1a0e06; }
+  .drawer-color-gold .drawer-face::before { background: linear-gradient(180deg, #d4a934, #8c620e); }
+  .drawer-color-green .drawer-face { background: linear-gradient(180deg, #6fb085 0%, #245c3a 100%); color: #fff; }
+  .drawer-color-green .drawer-face::before { background: linear-gradient(180deg, #4f8d63, #18432a); }
+  .drawer-color-plum .drawer-face { background: linear-gradient(180deg, #a085c1 0%, #503d75 100%); color: #fff; }
+  .drawer-color-plum .drawer-face::before { background: linear-gradient(180deg, #7f649f, #3a2c57); }
+  .drawer-color-teal .drawer-face { background: linear-gradient(180deg, #4ba3a3 0%, #1c5a5a 100%); color: #fff; }
+  .drawer-color-teal .drawer-face::before { background: linear-gradient(180deg, #2f8585, #134242); }
+  .drawer-color-slate .drawer-face { background: linear-gradient(180deg, #7a8595 0%, #3a4150 100%); color: #fff; }
+  .drawer-color-slate .drawer-face::before { background: linear-gradient(180deg, #5e6878, #232934); }
+  .drawer-color-rose .drawer-face { background: linear-gradient(180deg, #e08fa5 0%, #9a3b58 100%); color: #fff; }
+  .drawer-color-rose .drawer-face::before { background: linear-gradient(180deg, #c46e87, #74253e); }
+
+  /* Drag handle on each drawer */
+  .drag-handle {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    background: rgba(0,0,0,0.4);
+    color: rgba(246,241,231,0.95);
+    border: none;
+    padding: 3px 9px;
+    border-radius: 3px;
+    cursor: grab;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-family: inherit;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 3;
+    touch-action: none;
+  }
+  .drawer:hover .drag-handle { opacity: 1; }
+  .drag-handle:active { cursor: grabbing; }
+
+  /* Drag state */
+  body.dragging-drawer { cursor: grabbing; user-select: none; }
+  body.dragging-drawer * { cursor: grabbing !important; }
+  body.dragging-drawer .drawer:not(.drag-source):hover .drawer-face { transform: none; }
+  .drag-source {
+    opacity: 0.35;
+    pointer-events: none;
+    outline: 2px dashed var(--accent);
+    outline-offset: -2px;
+  }
+  .drawer-ghost {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.92;
+    transform: rotate(1.5deg) scale(1.03);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.7);
+  }
+  .drawer-ghost .drawer-face { transform: none !important; }
+  .drawer-shift {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Focus view */
+  .focus-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.78);
+    z-index: 5000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: focusFadeIn 0.18s ease;
+  }
+  .focus-overlay[hidden] { display: none !important; }
+  @keyframes focusFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .focus-panel {
+    background: linear-gradient(180deg, #b88a55 0%, #8c6435 100%);
+    border: 4px solid #1a0e06;
+    border-radius: 8px;
+    padding: 36px 26px 24px;
+    width: 100%;
+    max-width: 540px;
+    max-height: 88vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.75);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.45) transparent;
+  }
+  .focus-panel::-webkit-scrollbar { width: 6px; }
+  .focus-panel::-webkit-scrollbar-track { background: transparent; }
+  .focus-panel::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.45); border-radius: 3px; }
+  .focus-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: rgba(0,0,0,0.4);
+    color: #f6f1e7;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    line-height: 1;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  .focus-close:hover { background: rgba(0,0,0,0.7); }
+  .focus-label {
+    font-size: clamp(24px, 3.4vw, 38px);
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #1a0e06;
+    text-align: center;
+    margin-bottom: 4px;
+    padding: 0 28px;
+    line-height: 1.1;
+  }
+  .focus-meta {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(26,14,6,0.6);
+    margin-bottom: 22px;
+  }
+  .focus-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .focus-items .page {
+    padding: 9px 14px;
+    font-size: 16px;
+  }
+  .focus-items .page-delete { font-size: 18px; opacity: 0.5; }
+  .focus-items .page:hover .page-delete { opacity: 0.9; }
+  .focus-items .page-add {
+    padding: 10px 14px;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  /* Color picker in dialog */
+  .color-picker {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 4px 0;
+  }
+  .swatch {
+    width: 34px;
+    height: 34px;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.1s;
+  }
+  .swatch:hover { transform: scale(1.1); }
+  .swatch.selected { border-color: var(--ink); box-shadow: 0 0 0 2px var(--accent); }
+  .swatch[data-color="default"] { background: linear-gradient(180deg, #d4a76a, #b0843f); }
+  .swatch[data-color="orange"] { background: linear-gradient(180deg, #ff8866, #c44012); }
+  .swatch[data-color="blue"] { background: linear-gradient(180deg, #6aa6dd, #1d4f80); }
+  .swatch[data-color="gold"] { background: linear-gradient(180deg, #f5cd5a, #b8841d); }
+  .swatch[data-color="green"] { background: linear-gradient(180deg, #6fb085, #245c3a); }
+  .swatch[data-color="plum"] { background: linear-gradient(180deg, #a085c1, #503d75); }
+  .swatch[data-color="teal"] { background: linear-gradient(180deg, #4ba3a3, #1c5a5a); }
+  .swatch[data-color="slate"] { background: linear-gradient(180deg, #7a8595, #3a4150); }
+  .swatch[data-color="rose"] { background: linear-gradient(180deg, #e08fa5, #9a3b58); }
+  .page-add {
+    background: rgba(249,244,234,0.5);
+    color: rgba(15,17,21,0.65);
+    border: 1px dashed rgba(15,17,21,0.4);
+    border-radius: 2px;
+    padding: 4px 6px;
+    font-size: clamp(9px, 0.8vw, 11px);
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-align: center;
+    justify-content: center;
+    box-shadow: none;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .page-add:hover {
+    background: rgba(249,244,234,0.95);
+    color: var(--ink);
+    border-color: var(--accent);
+  }
+  .page-add-active {
+    background: white;
+    border-left: 3px solid var(--accent);
+    padding: 4px 6px 4px 8px;
+  }
+  .page:nth-child(5n+2) { border-left-color: #2b6cb0; }
+  .page:nth-child(5n+3) { border-left-color: #e6b325; }
+  .page:nth-child(5n+4) { border-left-color: #2f7d4f; }
+  .page:nth-child(5n+5) { border-left-color: #0f1115; }
+  .drawer:hover .drawer-face { transform: translateY(-105%); transition-delay: 0.45s; }
+  .drawer { cursor: pointer; }
+
+  /* Controls below cabinet */
+  .controls {
+    margin-top: 28px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+  .controls button {
+    background: var(--accent);
+    color: var(--paper);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.45);
+    font-family: inherit;
+  }
+  .controls button:hover { filter: brightness(1.1); }
+  .controls button.secondary {
+    background: transparent;
+    color: rgba(246,241,231,0.7);
+    border: 1px solid rgba(246,241,231,0.3);
+    box-shadow: none;
+  }
+  .controls button.secondary:hover { color: var(--paper); border-color: var(--paper); filter: none; }
+
+  /* How-to */
+  .howto {
+    margin-top: 28px;
+    color: rgba(246,241,231,0.6);
+    font-size: 13px;
+    text-align: center;
+  }
+  .howto summary {
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-size: 11px;
+    color: rgba(246,241,231,0.5);
+    list-style: none;
+  }
+  .howto summary::-webkit-details-marker { display: none; }
+  .howto summary::before { content: '+  '; }
+  .howto[open] summary::before { content: '\2212  '; }
+  .howto ul {
+    margin-top: 14px;
+    list-style: none;
+    line-height: 1.8;
+  }
+  .howto kbd {
+    background: rgba(246,241,231,0.12);
+    border: 1px solid rgba(246,241,231,0.25);
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 12px;
+  }
+
+  /* Modal */
+  dialog {
+    background: var(--paper);
+    color: var(--ink);
+    border: none;
+    border-radius: 8px;
+    padding: 28px;
+    max-width: 480px;
+    width: calc(100% - 32px);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6);
+  }
+  dialog::backdrop {
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(2px);
+  }
+  dialog h2 {
+    font-size: 22px;
+    font-weight: 900;
+    margin-bottom: 18px;
+    letter-spacing: -0.01em;
+  }
+  dialog form { display: flex; flex-direction: column; gap: 14px; }
+  dialog label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  dialog input, dialog textarea, dialog select {
+    background: white;
+    border: 1px solid rgba(0,0,0,0.25);
+    padding: 10px 12px;
+    border-radius: 4px;
+    font-size: 15px;
+    color: var(--ink);
+    font-family: inherit;
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+  dialog textarea { min-height: 120px; resize: vertical; font-family: inherit; }
+  dialog input:focus, dialog textarea:focus, dialog select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .dialog-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+  .dialog-buttons button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 9px 20px;
+    border-radius: 4px;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .dialog-buttons button.secondary {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid rgba(0,0,0,0.2);
+  }
+  .dialog-buttons button.danger {
+    background: transparent;
+    color: #b22;
+    border: 1px solid #b22;
+    margin-right: auto;
+  }
+  .dialog-buttons button:hover { filter: brightness(1.08); }
+  .dialog-buttons button.secondary:hover, .dialog-buttons button.danger:hover { filter: none; opacity: 0.8; }
+
+  /* Footer */
+  footer {
+    max-width: 720px;
+    margin: 50px auto 0;
+    text-align: center;
+    color: rgba(246,241,231,0.35);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    line-height: 1.8;
+  }
+  footer a { color: rgba(246,241,231,0.5); text-decoration: none; }
+  footer a:hover { color: rgba(246,241,231,0.85); }
+
+  @media (max-width: 600px) {
+    .cabinet { grid-template-columns: 1fr 1fr; }
+    .drawer { min-height: 80px; }
+    body { padding: 20px 12px 40px; }
+  }
+
+  /* Print view (hidden on screen, shown only when printing) */
+  #print-view { display: none; }
+  @media print {
+    @page { size: letter; margin: 0.5in; }
+    body { background: #fff !important; color: #000 !important; padding: 0; }
+    header, main, footer, dialog, .site-nav { display: none !important; }
+    #print-view {
+      display: block !important;
+      background: #fff;
+      color: #000;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+    .print-header {
+      text-align: center;
+      border-bottom: 2px solid #000;
+      padding-bottom: 12px;
+      margin-bottom: 22px;
+    }
+    .print-header h1 {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -0.01em;
+    }
+    .print-meta {
+      font-size: 10px;
+      margin-top: 6px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #555;
+    }
+    .print-grid {
+      columns: 2;
+      column-gap: 28px;
+      column-rule: 1px solid #ddd;
+    }
+    .print-card {
+      break-inside: avoid;
+      page-break-inside: avoid;
+      margin-bottom: 18px;
+    }
+    .print-card h2 {
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      border-left: 4px solid #000;
+      padding-left: 8px;
+      margin-bottom: 6px;
+    }
+    .print-card ul {
+      list-style: disc;
+      padding-left: 22px;
+      font-size: 12px;
+      line-height: 1.55;
+      margin-top: 2px;
+    }
+    .print-card li { margin-bottom: 1px; }
+    .print-note {
+      font-size: 10px;
+      color: #555;
+      line-height: 1.4;
+      margin: 1px 0 4px;
+      padding-left: 2px;
+      white-space: pre-wrap;
+    }
+    .print-footer {
+      margin-top: 26px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+      text-align: center;
+      font-size: 9px;
+      color: #888;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+  }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="site-nav-left">
+    <h1>English as a Second Language</h1>
+    <span>Berklee College of Music · Fall 2026</span>
+  </div>
+  <a class="site-nav-back" href="../../">← Course materials</a>
+</nav>
+
+<header>
+  <h1>Stuff to <span class="hl">Track</span></h1>
+  <p>A workshop cabinet for the things you can't drop. Hover a folder to open it. <strong>Hover a drawer and press <kbd>X</kbd> to delete it.</strong> Keep separate cabinets as <strong>workbenches</strong> and switch between them up top. Your changes save to this browser.</p>
+</header>
+
+<main>
+  <div class="workbench-bar" id="workbench-bar"></div>
+
+  <div class="cabinet" id="cabinet"></div>
+
+  <div class="controls">
+    <button id="add-drawer">+ Add a Drawer</button>
+    <button id="export-pdf" class="secondary">Export PDF</button>
+    <button id="reset" class="secondary">Reset to defaults</button>
+  </div>
+
+  <details class="howto">
+    <summary>How to use</summary>
+    <ul>
+      <li><strong>Hover</strong> a folder to peek at it · <strong>click</strong> the folder label to expand it full-size</li>
+      <li>Click <strong>+ Add item</strong> at the bottom of an open folder to add a new one</li>
+      <li><strong>Double-click</strong> an item to rename it · click the <strong>×</strong> next to it to delete</li>
+      <li>Click the <strong>✎</strong> on an item to open a note for it. Write as much as you want; it saves automatically. A filled <strong>✎</strong> means that item has a note.</li>
+      <li>Click <strong>Edit</strong> on a folder to change its label, items, width, or color</li>
+      <li>Grab the <strong>Move</strong> handle (top-left) and drag a drawer to reorder it. An orange bar shows where it will snap in.</li>
+      <li>Hover a folder and press <kbd>X</kbd> to delete the whole drawer</li>
+      <li><strong>Workbenches</strong> are saved sets of drawers. Use the tabs at the top to switch between them, click <strong>+ New workbench</strong> to start a fresh set, click the active tab to rename it, or the <strong>×</strong> on a tab to delete it</li>
+      <li>All changes save automatically to your browser. Nothing leaves your device.</li>
+    </ul>
+  </details>
+</main>
+
+<dialog id="edit-modal">
+  <form id="edit-form">
+    <h2 id="edit-title">Edit Drawer</h2>
+    <label>
+      Label
+      <input type="text" name="label" maxlength="28" required>
+    </label>
+    <label>
+      Items (one per line)
+      <textarea name="items" required></textarea>
+    </label>
+    <label>
+      Width
+      <select name="width">
+        <option value="1">Narrow (1 column)</option>
+        <option value="2">Medium (2 columns)</option>
+        <option value="3">Wide (3 columns)</option>
+      </select>
+    </label>
+    <label>
+      Color
+      <div class="color-picker" id="color-picker">
+        <button type="button" class="swatch" data-color="default" title="Wood (default)"></button>
+        <button type="button" class="swatch" data-color="orange" title="Orange"></button>
+        <button type="button" class="swatch" data-color="blue" title="Blue"></button>
+        <button type="button" class="swatch" data-color="gold" title="Gold"></button>
+        <button type="button" class="swatch" data-color="green" title="Green"></button>
+        <button type="button" class="swatch" data-color="plum" title="Plum"></button>
+        <button type="button" class="swatch" data-color="teal" title="Teal"></button>
+        <button type="button" class="swatch" data-color="slate" title="Slate"></button>
+        <button type="button" class="swatch" data-color="rose" title="Rose"></button>
+      </div>
+    </label>
+    <div class="dialog-buttons">
+      <button type="button" class="danger" id="delete-drawer" hidden>Delete</button>
+      <button type="button" class="secondary" id="cancel-edit">Cancel</button>
+      <button type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<footer>
+  <div>Have your stuff together.</div>
+  <div>Saved to your browser — nothing leaves your device.</div>
+  <div style="margin-top:10px;"><a href="../../">← Back to course materials</a></div>
+</footer>
+
+<div id="focus-view" class="focus-overlay" hidden>
+  <div class="focus-panel">
+    <button id="focus-close" class="focus-close" type="button" title="Close" aria-label="Close focus view">&times;</button>
+    <div class="focus-label"></div>
+    <div class="focus-meta"></div>
+    <div class="focus-items"></div>
+  </div>
+</div>
+
+<div id="note-view" class="note-overlay" hidden>
+  <div class="note-sheet">
+    <button id="note-close" class="note-close" type="button" title="Close" aria-label="Close note">&times;</button>
+    <div id="note-item-label" class="note-item-label"></div>
+    <div id="note-status" class="note-status">Saved automatically</div>
+    <textarea id="note-text" class="note-textarea" placeholder="Write a note for this item. It saves automatically."></textarea>
+  </div>
+</div>
+
+<section id="print-view" aria-hidden="true">
+  <div class="print-header">
+    <h1>Stuff to Track</h1>
+    <div class="print-meta"></div>
+  </div>
+  <div class="print-grid"></div>
+  <div class="print-footer">Exported from Stuff to Track</div>
+</section>
+
+<script>
+  const STORAGE_KEY = 'stuff-to-track-v2';
+  const LEGACY_KEY = 'stuff-to-track-v1';
+
+  const DEFAULTS = [
+    { id: 'vocab', label: 'Vocabulary', items: ['Write 5 new words', 'Review flashcards', 'Use in a sentence'], width: 3, color: 'blue' },
+    { id: 'tasks', label: 'To Do', items: ['Read syllabus', 'Email prof Gibson', 'Canvas assignment'], width: 3, color: 'orange' },
+    { id: 'goals', label: 'My Goals', items: ['Speak more in class', 'Improve pronunciation', 'Write in my journal'], width: 3, color: 'green' },
+  ];
+
+  function clone(x) { return JSON.parse(JSON.stringify(x)); }
+  function uid() { return 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function wid() { return 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  // Items are stored as { text, note }. Older saves used plain strings; normalize on the way in.
+  function normalizeItem(it) {
+    if (typeof it === 'string') return { text: it, note: '' };
+    return { text: it.text || '', note: typeof it.note === 'string' ? it.note : '' };
+  }
+  function normalizeDrawers(list) {
+    (list || []).forEach(d => { d.items = (d.items || []).map(normalizeItem); });
+    return list;
+  }
+  function newWorkbench(name, drawerList) {
+    return { id: wid(), name: name || 'Untitled Workbench', drawers: normalizeDrawers(drawerList || clone(DEFAULTS)) };
+  }
+
+  // state = { activeId, workbenches: [ { id, name, drawers: [...] } ] }
+  let state = loadState();
+  state.workbenches.forEach(w => normalizeDrawers(w.drawers));
+  let drawers = activeWorkbench().drawers; // live reference to the active workbench's drawers
+
+  function activeWorkbench() {
+    return state.workbenches.find(w => w.id === state.activeId) || state.workbenches[0];
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.workbenches) && parsed.workbenches.length) {
+          if (!parsed.workbenches.some(w => w.id === parsed.activeId)) {
+            parsed.activeId = parsed.workbenches[0].id;
+          }
+          return parsed;
+        }
+      }
+      // Migrate a single-cabinet save from the pre-workbench version
+      const legacy = localStorage.getItem(LEGACY_KEY);
+      if (legacy) {
+        const ld = JSON.parse(legacy);
+        if (Array.isArray(ld) && ld.length) {
+          const wb = newWorkbench('My Workbench', ld);
+          return { activeId: wb.id, workbenches: [wb] };
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load state', e);
+    }
+    const wb = newWorkbench('My Workbench', clone(DEFAULTS));
+    return { activeId: wb.id, workbenches: [wb] };
+  }
+
+  function save() {
+    const wb = activeWorkbench();
+    if (wb) wb.drawers = drawers; // re-sync after any reassignment of `drawers`
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn('Could not save to localStorage', e);
+    }
+  }
+
+  const cabinet = document.getElementById('cabinet');
+  const workbenchBar = document.getElementById('workbench-bar');
+
+  function renderWorkbenches() {
+    workbenchBar.innerHTML = '';
+    state.workbenches.forEach(w => {
+      const pill = document.createElement('div');
+      pill.className = 'wb-pill' + (w.id === state.activeId ? ' active' : '');
+      pill.dataset.id = w.id;
+
+      const name = document.createElement('button');
+      name.type = 'button';
+      name.className = 'wb-name';
+      name.textContent = w.name;
+      name.title = w.id === state.activeId ? 'Click to rename this workbench' : 'Click to switch to this workbench';
+      name.addEventListener('click', () => {
+        if (w.id === state.activeId) renameWorkbench(w.id);
+        else switchWorkbench(w.id);
+      });
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'wb-delete';
+      del.textContent = '×';
+      del.title = 'Delete this workbench';
+      del.setAttribute('aria-label', `Delete workbench ${w.name}`);
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteWorkbench(w.id);
+      });
+
+      pill.appendChild(name);
+      pill.appendChild(del);
+      workbenchBar.appendChild(pill);
+    });
+
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'wb-add';
+    add.textContent = '+ New workbench';
+    add.title = 'Save the current set and start a fresh workbench';
+    add.addEventListener('click', createWorkbench);
+    workbenchBar.appendChild(add);
+  }
+
+  function switchWorkbench(id) {
+    if (id === state.activeId) return;
+    const wb = state.workbenches.find(w => w.id === id);
+    if (!wb) return;
+    closeFocus();
+    state.activeId = id;
+    drawers = wb.drawers;
+    save();
+    renderWorkbenches();
+    render();
+  }
+
+  function createWorkbench() {
+    const raw = prompt('Name your new workbench', 'Workbench ' + (state.workbenches.length + 1));
+    if (raw === null) return;
+    const name = raw.trim() || 'Untitled Workbench';
+    const wb = newWorkbench(name, clone(DEFAULTS));
+    state.workbenches.push(wb);
+    state.activeId = wb.id;
+    drawers = wb.drawers;
+    save();
+    renderWorkbenches();
+    render();
+  }
+
+  function renameWorkbench(id) {
+    const wb = state.workbenches.find(w => w.id === id);
+    if (!wb) return;
+    const raw = prompt('Rename workbench', wb.name);
+    if (raw === null) return;
+    const name = raw.trim();
+    if (!name) return;
+    wb.name = name;
+    save();
+    renderWorkbenches();
+  }
+
+  function deleteWorkbench(id) {
+    if (state.workbenches.length <= 1) {
+      alert('This is your only workbench. Create another one before deleting this.');
+      return;
+    }
+    const wb = state.workbenches.find(w => w.id === id);
+    if (!wb) return;
+    if (!confirm(`Delete the workbench "${wb.name}"? Its drawers will be lost.`)) return;
+    const idx = state.workbenches.findIndex(w => w.id === id);
+    state.workbenches = state.workbenches.filter(w => w.id !== id);
+    if (state.activeId === id) {
+      const next = state.workbenches[Math.max(0, idx - 1)];
+      state.activeId = next.id;
+      drawers = next.drawers;
+    }
+    save();
+    renderWorkbenches();
+    render();
+  }
+
+  function makeNoteBtn(drawerId, idx) {
+    const drawer = drawers.find(x => x.id === drawerId);
+    const item = drawer && drawer.items[idx];
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'page-note' + (item && item.note ? ' has-note' : '');
+    btn.textContent = '✎';
+    btn.title = item && item.note ? 'Edit note' : 'Add a note';
+    btn.setAttribute('aria-label', 'Note');
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openNote(drawerId, idx);
+    });
+    return btn;
+  }
+
+  function render() {
+    cabinet.innerHTML = '';
+    drawers.forEach(d => {
+      const el = document.createElement('div');
+      const color = d.color || 'default';
+      el.className = 'drawer drawer-color-' + color;
+      el.dataset.id = d.id;
+      el.style.gridColumn = `span ${Math.max(1, Math.min(3, d.width || 1))}`;
+
+      const folder = document.createElement('div');
+      folder.className = 'drawer-folder';
+      d.items.forEach((item, idx) => {
+        const page = document.createElement('div');
+        page.className = 'page';
+
+        const text = document.createElement('span');
+        text.className = 'page-text';
+        text.textContent = item.text;
+        text.title = 'Double-click to edit';
+        text.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          beginItemEdit(el, d.id, idx, text);
+        });
+
+        const noteBtn = makeNoteBtn(d.id, idx);
+
+        const xBtn = document.createElement('button');
+        xBtn.type = 'button';
+        xBtn.className = 'page-delete';
+        xBtn.textContent = '×';
+        xBtn.title = 'Delete this item';
+        xBtn.setAttribute('aria-label', `Delete ${item.text}`);
+        xBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const drawer = drawers.find(x => x.id === d.id);
+          if (!drawer) return;
+          drawer.items.splice(idx, 1);
+          save();
+          render();
+        });
+
+        page.appendChild(text);
+        page.appendChild(noteBtn);
+        page.appendChild(xBtn);
+        folder.appendChild(page);
+      });
+
+      const addPage = document.createElement('div');
+      addPage.className = 'page page-add';
+      addPage.textContent = '+ Add item';
+      addPage.title = 'Click to add a new item';
+      addPage.addEventListener('click', (e) => {
+        e.stopPropagation();
+        beginAddItem(el, d.id, addPage);
+      });
+      folder.appendChild(addPage);
+
+      const face = document.createElement('div');
+      face.className = 'drawer-face';
+      face.textContent = d.label;
+      face.title = 'Click to expand this drawer';
+
+      const edit = document.createElement('button');
+      edit.className = 'edit-btn';
+      edit.type = 'button';
+      edit.textContent = 'Edit';
+      edit.title = 'Edit drawer';
+      edit.setAttribute('aria-label', `Edit ${d.label}`);
+      edit.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEdit(d.id);
+      });
+
+      const drag = document.createElement('button');
+      drag.className = 'drag-handle';
+      drag.type = 'button';
+      drag.textContent = 'Move';
+      drag.title = 'Drag to reorder';
+      drag.setAttribute('aria-label', `Reorder ${d.label}`);
+      drag.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        startDrag(e, d.id);
+      });
+
+      el.appendChild(folder);
+      el.appendChild(face);
+      el.appendChild(edit);
+      el.appendChild(drag);
+
+      el.addEventListener('click', (e) => {
+        if (dragState) return;
+        if (e.target.closest('.edit-btn, .drag-handle, .page, .page-add, .page-add-active, .page-edit-input')) return;
+        openFocus(d.id);
+      });
+
+      cabinet.appendChild(el);
+    });
+    requestAnimationFrame(flagOverflows);
+  }
+
+  function flagOverflows() {
+    document.querySelectorAll('.drawer').forEach(d => {
+      const folder = d.querySelector('.drawer-folder');
+      if (folder && folder.scrollHeight > folder.clientHeight + 1) {
+        d.classList.add('has-overflow');
+      } else {
+        d.classList.remove('has-overflow');
+      }
+    });
+  }
+
+  window.addEventListener('resize', flagOverflows);
+
+  // Drag-and-drop reorder with live reordering of other drawers
+  let dragState = null;
+
+  function startDrag(e, drawerId) {
+    const sourceEl = document.querySelector(`.drawer[data-id="${drawerId}"]`);
+    if (!sourceEl || modal.open) return;
+    const rect = sourceEl.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+
+    const ghost = sourceEl.cloneNode(true);
+    ghost.classList.add('drawer-ghost');
+    ghost.classList.remove('drag-source', 'has-overflow', 'editing');
+    ghost.style.width = rect.width + 'px';
+    ghost.style.height = rect.height + 'px';
+    ghost.style.left = (e.clientX - offsetX) + 'px';
+    ghost.style.top = (e.clientY - offsetY) + 'px';
+    ghost.style.gridColumn = '';
+    document.body.appendChild(ghost);
+
+    sourceEl.classList.add('drag-source');
+    document.body.classList.add('dragging-drawer');
+
+    dragState = {
+      id: drawerId,
+      ghost,
+      offsetX,
+      offsetY,
+      originalOrder: drawers.map(d => d.id),
+    };
+
+    document.addEventListener('pointermove', onDragMove);
+    document.addEventListener('pointerup', onDragEnd);
+    document.addEventListener('pointercancel', onDragEnd);
+  }
+
+  function capturePositions() {
+    const map = new Map();
+    document.querySelectorAll('.drawer').forEach(el => {
+      map.set(el.dataset.id, el.getBoundingClientRect());
+    });
+    return map;
+  }
+
+  function playShiftAnimation(oldPositions) {
+    document.querySelectorAll('.drawer').forEach(el => {
+      const oldRect = oldPositions.get(el.dataset.id);
+      if (!oldRect) return;
+      const newRect = el.getBoundingClientRect();
+      const dx = oldRect.left - newRect.left;
+      const dy = oldRect.top - newRect.top;
+      if (dx === 0 && dy === 0) return;
+      el.style.transition = 'none';
+      el.style.transform = `translate(${dx}px, ${dy}px)`;
+      requestAnimationFrame(() => {
+        el.classList.add('drawer-shift');
+        el.style.transform = '';
+        el.addEventListener('transitionend', () => {
+          el.classList.remove('drawer-shift');
+          el.style.transition = '';
+        }, { once: true });
+      });
+    });
+  }
+
+  function onDragMove(e) {
+    if (!dragState) return;
+    const { ghost, offsetX, offsetY, id } = dragState;
+    ghost.style.left = (e.clientX - offsetX) + 'px';
+    ghost.style.top = (e.clientY - offsetY) + 'px';
+
+    ghost.style.display = 'none';
+    const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
+    ghost.style.display = '';
+
+    const target = elemBelow ? elemBelow.closest('.drawer:not(.drag-source)') : null;
+    if (!target) return;
+
+    const r = target.getBoundingClientRect();
+    const side = e.clientX < r.left + r.width / 2 ? 'before' : 'after';
+    const targetId = target.dataset.id;
+    const sourceIdx = drawers.findIndex(d => d.id === id);
+    let targetIdx = drawers.findIndex(d => d.id === targetId);
+    let newIdx = side === 'before' ? targetIdx : targetIdx + 1;
+    if (sourceIdx < newIdx) newIdx--;
+    if (newIdx === sourceIdx) return;
+
+    const oldPositions = capturePositions();
+    const [moved] = drawers.splice(sourceIdx, 1);
+    drawers.splice(newIdx, 0, moved);
+    render();
+    const newSource = document.querySelector(`.drawer[data-id="${id}"]`);
+    if (newSource) newSource.classList.add('drag-source');
+    playShiftAnimation(oldPositions);
+  }
+
+  function onDragEnd() {
+    document.removeEventListener('pointermove', onDragMove);
+    document.removeEventListener('pointerup', onDragEnd);
+    document.removeEventListener('pointercancel', onDragEnd);
+    if (!dragState) return;
+    const { ghost, id, originalOrder } = dragState;
+    ghost.remove();
+    document.body.classList.remove('dragging-drawer');
+
+    const moved = !originalOrder.every((origId, i) => drawers[i] && drawers[i].id === origId);
+    dragState = null;
+
+    if (moved) save();
+    render();
+  }
+
+  // Modal handling
+  const modal = document.getElementById('edit-modal');
+  const form = document.getElementById('edit-form');
+  const editTitle = document.getElementById('edit-title');
+  const deleteBtn = document.getElementById('delete-drawer');
+  const cancelBtn = document.getElementById('cancel-edit');
+  const colorPicker = document.getElementById('color-picker');
+  let editingId = null;
+  let selectedColor = 'default';
+
+  function setSelectedColor(c) {
+    selectedColor = c;
+    colorPicker.querySelectorAll('.swatch').forEach(s => {
+      s.classList.toggle('selected', s.dataset.color === c);
+    });
+  }
+
+  colorPicker.querySelectorAll('.swatch').forEach(s => {
+    s.addEventListener('click', () => setSelectedColor(s.dataset.color));
+  });
+
+  function openEdit(id) {
+    const d = drawers.find(x => x.id === id);
+    if (!d) return;
+    editingId = id;
+    editTitle.textContent = 'Edit Drawer';
+    form.label.value = d.label;
+    form.items.value = d.items.map(it => it.text).join('\n');
+    form.width.value = String(d.width || 1);
+    setSelectedColor(d.color || 'default');
+    deleteBtn.hidden = false;
+    modal.showModal();
+    form.label.focus();
+    form.label.select();
+  }
+
+  function beginItemEdit(drawerEl, drawerId, idx, textSpan) {
+    drawerEl.classList.add('editing');
+    const original = textSpan.textContent;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'page-edit-input';
+    input.value = original;
+    textSpan.replaceWith(input);
+    input.focus();
+    input.select();
+    let done = false;
+    const finish = (commit) => {
+      if (done) return;
+      done = true;
+      drawerEl.classList.remove('editing');
+      if (commit) {
+        const val = input.value.trim();
+        const drawer = drawers.find(x => x.id === drawerId);
+        if (drawer && val) {
+          drawer.items[idx].text = val;
+          save();
+        }
+      }
+      render();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', () => finish(true));
+  }
+
+  function beginAddItem(drawerEl, drawerId, addPageEl) {
+    drawerEl.classList.add('editing');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'page page-add-active';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'page-edit-input';
+    input.placeholder = 'New item, then Enter';
+    wrapper.appendChild(input);
+    addPageEl.replaceWith(wrapper);
+    input.focus();
+    let done = false;
+    const finish = (commit) => {
+      if (done) return;
+      done = true;
+      drawerEl.classList.remove('editing');
+      if (commit) {
+        const val = input.value.trim();
+        const drawer = drawers.find(x => x.id === drawerId);
+        if (drawer && val) {
+          drawer.items.push({ text: val, note: '' });
+          save();
+        }
+      }
+      render();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', () => finish(true));
+  }
+
+  function openCreate() {
+    editingId = null;
+    editTitle.textContent = 'Add a Drawer';
+    form.label.value = '';
+    form.items.value = '';
+    form.width.value = '1';
+    setSelectedColor('default');
+    deleteBtn.hidden = true;
+    modal.showModal();
+    form.label.focus();
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const label = form.label.value.trim();
+    const lines = form.items.value.split('\n').map(s => s.trim()).filter(Boolean);
+    const width = parseInt(form.width.value, 10) || 1;
+    if (!label || lines.length === 0) return;
+
+    // Preserve notes: match each new line to an existing item with the same text.
+    const existing = editingId ? ((drawers.find(x => x.id === editingId) || {}).items || []) : [];
+    const pool = existing.map(it => ({ text: it.text, note: it.note }));
+    const items = lines.map(line => {
+      const hit = pool.findIndex(p => p.text === line);
+      if (hit !== -1) { const [m] = pool.splice(hit, 1); return { text: line, note: m.note || '' }; }
+      return { text: line, note: '' };
+    });
+
+    if (editingId) {
+      const d = drawers.find(x => x.id === editingId);
+      if (d) { d.label = label; d.items = items; d.width = width; d.color = selectedColor; }
+    } else {
+      drawers.push({ id: uid(), label, items, width, color: selectedColor });
+    }
+    save();
+    render();
+    modal.close();
+  });
+
+  cancelBtn.addEventListener('click', () => modal.close());
+
+  deleteBtn.addEventListener('click', () => {
+    if (!editingId) return;
+    drawers = drawers.filter(x => x.id !== editingId);
+    save();
+    render();
+    modal.close();
+  });
+
+  document.getElementById('add-drawer').addEventListener('click', openCreate);
+
+  // Focus view (single drawer expanded)
+  const focusView = document.getElementById('focus-view');
+  const focusCloseBtn = document.getElementById('focus-close');
+  let focusedId = null;
+
+  function openFocus(id) {
+    focusedId = id;
+    renderFocus();
+    focusView.hidden = false;
+  }
+
+  function closeFocus() {
+    focusedId = null;
+    focusView.hidden = true;
+  }
+
+  function renderFocus() {
+    if (!focusedId) return;
+    const d = drawers.find(x => x.id === focusedId);
+    if (!d) { closeFocus(); return; }
+    const labelEl = focusView.querySelector('.focus-label');
+    const metaEl = focusView.querySelector('.focus-meta');
+    const itemsEl = focusView.querySelector('.focus-items');
+    labelEl.textContent = d.label;
+    metaEl.textContent = `${d.items.length} ${d.items.length === 1 ? 'item' : 'items'}`;
+    itemsEl.innerHTML = '';
+    d.items.forEach((item, idx) => {
+      const page = document.createElement('div');
+      page.className = 'page';
+      const text = document.createElement('span');
+      text.className = 'page-text';
+      text.textContent = item.text;
+      text.title = 'Double-click to edit';
+      text.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        beginFocusItemEdit(d.id, idx, text);
+      });
+      const noteBtn = makeNoteBtn(d.id, idx);
+      const xBtn = document.createElement('button');
+      xBtn.type = 'button';
+      xBtn.className = 'page-delete';
+      xBtn.textContent = '×';
+      xBtn.title = 'Delete this item';
+      xBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const drawer = drawers.find(x => x.id === d.id);
+        if (!drawer) return;
+        drawer.items.splice(idx, 1);
+        save();
+        render();
+        renderFocus();
+      });
+      page.appendChild(text);
+      page.appendChild(noteBtn);
+      page.appendChild(xBtn);
+      itemsEl.appendChild(page);
+    });
+    const addPage = document.createElement('div');
+    addPage.className = 'page page-add';
+    addPage.textContent = '+ Add item';
+    addPage.title = 'Click to add a new item';
+    addPage.addEventListener('click', (e) => {
+      e.stopPropagation();
+      beginFocusAddItem(d.id, addPage);
+    });
+    itemsEl.appendChild(addPage);
+  }
+
+  function beginFocusItemEdit(drawerId, idx, textSpan) {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'page-edit-input';
+    input.value = textSpan.textContent;
+    textSpan.replaceWith(input);
+    input.focus();
+    input.select();
+    let done = false;
+    const finish = (commit) => {
+      if (done) return;
+      done = true;
+      if (commit) {
+        const val = input.value.trim();
+        const drawer = drawers.find(x => x.id === drawerId);
+        if (drawer && val) {
+          drawer.items[idx].text = val;
+          save();
+          render();
+        }
+      }
+      renderFocus();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', () => finish(true));
+  }
+
+  function beginFocusAddItem(drawerId, addPageEl) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'page page-add-active';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'page-edit-input';
+    input.placeholder = 'New item, then Enter';
+    wrapper.appendChild(input);
+    addPageEl.replaceWith(wrapper);
+    input.focus();
+    let done = false;
+    const finish = (commit) => {
+      if (done) return;
+      done = true;
+      if (commit) {
+        const val = input.value.trim();
+        const drawer = drawers.find(x => x.id === drawerId);
+        if (drawer && val) {
+          drawer.items.push({ text: val, note: '' });
+          save();
+          render();
+        }
+      }
+      renderFocus();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+      if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', () => finish(true));
+  }
+
+  focusCloseBtn.addEventListener('click', closeFocus);
+  focusView.addEventListener('click', (e) => {
+    if (e.target === focusView) closeFocus();
+  });
+
+  // Item note editor (auto-saving bottom sheet)
+  const noteView = document.getElementById('note-view');
+  const noteCloseBtn = document.getElementById('note-close');
+  const noteText = document.getElementById('note-text');
+  const noteItemLabel = document.getElementById('note-item-label');
+  const noteStatus = document.getElementById('note-status');
+  let noteCtx = null;
+  let noteSaveTimer = null;
+
+  function currentNoteItem() {
+    if (!noteCtx) return null;
+    const drawer = drawers.find(x => x.id === noteCtx.drawerId);
+    return drawer ? (drawer.items[noteCtx.idx] || null) : null;
+  }
+
+  function openNote(drawerId, idx) {
+    const drawer = drawers.find(x => x.id === drawerId);
+    if (!drawer || !drawer.items[idx]) return;
+    noteCtx = { drawerId, idx };
+    noteItemLabel.textContent = drawer.items[idx].text;
+    noteText.value = drawer.items[idx].note || '';
+    noteStatus.textContent = 'Saved automatically';
+    noteView.hidden = false;
+    noteText.focus();
+  }
+
+  function closeNote() {
+    if (noteSaveTimer) { clearTimeout(noteSaveTimer); noteSaveTimer = null; }
+    const item = currentNoteItem();
+    if (item) { item.note = noteText.value; save(); }
+    noteCtx = null;
+    noteView.hidden = true;
+    render();
+    if (focusedId) renderFocus();
+  }
+
+  noteText.addEventListener('input', () => {
+    const item = currentNoteItem();
+    if (!item) return;
+    item.note = noteText.value;
+    noteStatus.textContent = 'Saving…';
+    if (noteSaveTimer) clearTimeout(noteSaveTimer);
+    noteSaveTimer = setTimeout(() => {
+      save();
+      noteStatus.textContent = 'Saved automatically';
+      noteSaveTimer = null;
+    }, 300);
+  });
+
+  noteCloseBtn.addEventListener('click', closeNote);
+  noteView.addEventListener('click', (e) => {
+    if (e.target === noteView) closeNote();
+  });
+
+  // PDF export via browser print dialog
+  function renderPrintView() {
+    const grid = document.querySelector('#print-view .print-grid');
+    const meta = document.querySelector('#print-view .print-meta');
+    const h1 = document.querySelector('#print-view .print-header h1');
+    if (h1) h1.textContent = activeWorkbench().name;
+    grid.innerHTML = '';
+    drawers.forEach(d => {
+      const card = document.createElement('div');
+      card.className = 'print-card';
+      const h2 = document.createElement('h2');
+      h2.textContent = d.label;
+      const ul = document.createElement('ul');
+      d.items.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item.text;
+        if (item.note) {
+          const noteEl = document.createElement('div');
+          noteEl.className = 'print-note';
+          noteEl.textContent = item.note;
+          li.appendChild(noteEl);
+        }
+        ul.appendChild(li);
+      });
+      card.appendChild(h2);
+      card.appendChild(ul);
+      grid.appendChild(card);
+    });
+    const totalItems = drawers.reduce((sum, d) => sum + d.items.length, 0);
+    const date = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+    meta.textContent = `${date} · ${drawers.length} drawers · ${totalItems} items`;
+  }
+
+  document.getElementById('export-pdf').addEventListener('click', () => {
+    renderPrintView();
+    window.print();
+  });
+
+  // Also keep print view fresh if user prints via Cmd/Ctrl+P
+  window.addEventListener('beforeprint', renderPrintView);
+
+  document.getElementById('reset').addEventListener('click', () => {
+    if (confirm('Reset this workbench to the default drawers? Your custom drawers in this workbench will be lost.')) {
+      drawers = normalizeDrawers(clone(DEFAULTS));
+      save();
+      render();
+    }
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (!noteView.hidden) {
+      if (e.key === 'Escape') { e.preventDefault(); closeNote(); }
+      return;
+    }
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
+    if (modal.open) return;
+    if (focusedId) {
+      if (e.key === 'Escape') { e.preventDefault(); closeFocus(); }
+      return;
+    }
+    if (e.key === 'x' || e.key === 'X') {
+      const hovered = document.querySelector('.drawer:hover');
+      if (!hovered) return;
+      const id = hovered.dataset.id;
+      drawers = drawers.filter(x => x.id !== id);
+      save();
+      render();
+    }
+  });
+
+  renderWorkbenches();
+  render();
+</script>
+</body>
+</html>
