@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b1026">
+<title>Preposition Blaster</title>
+<style>
+  :root {
+    --bg: #0b1026;
+    --panel: rgba(10, 14, 40, 0.88);
+    --ink: #eef2ff;
+    --dim: #9aa5d1;
+    --cyan: #4cc9f0;
+    --mint: #5dffa6;
+    --coral: #ff6b6b;
+    --gold: #ffd166;
+    --violet: #b388ff;
+    --blank: #ffd166;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--ink);
+    font-family: "Avenir Next", "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  #stage { position: fixed; inset: 0; }
+  #game { display: block; width: 100%; height: 100%; }
+
+  /* ---------- Prompt (the sentence) ---------- */
+  #prompt {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    top: calc(env(safe-area-inset-top, 0px) + 54px);
+    width: min(92vw, 760px);
+    background: var(--panel); border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 16px; padding: 12px 18px;
+    text-align: center; font-size: clamp(18px, 2.6vw, 28px); line-height: 1.35;
+    font-weight: 600; letter-spacing: 0.1px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+    pointer-events: none; opacity: 0; transition: opacity .25s;
+  }
+  #prompt.show { opacity: 1; }
+  #prompt .kicker {
+    display: block; font-size: 0.5em; font-weight: 800; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--cyan); margin-bottom: 4px;
+  }
+  #prompt .blank {
+    display: inline-block; min-width: 2.6em; padding: 0 .3em;
+    border-bottom: 3px solid var(--blank); color: var(--blank);
+    animation: blankPulse 1.1s ease-in-out infinite; border-radius: 4px;
+  }
+  #prompt .blank.done { animation: none; border-bottom-color: transparent; }
+  #prompt .blank.right { color: var(--mint); background: rgba(93,255,166,0.14); }
+  #prompt .blank.wrong { color: var(--coral); background: rgba(255,107,107,0.14); }
+  #prompt .blank.pending { color: var(--dim); border-bottom-color: rgba(255,255,255,.25); animation: none; }
+  #prompt .blank.current { animation: blankPulse 1.1s ease-in-out infinite; }
+  #prompt .strike { text-decoration: line-through; color: var(--coral); opacity: .8; margin-right: .3em; }
+  #prompt .fix { color: var(--mint); font-weight: 800; }
+  #prompt .tip {
+    display: block; font-size: 0.62em; font-weight: 500; color: var(--dim);
+    margin-top: 6px; line-height: 1.3;
+  }
+  @keyframes blankPulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+  /* ---------- Touch hint ---------- */
+  #hint {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    font-size: 13px; color: var(--dim); pointer-events: none; opacity: 0; transition: opacity .4s;
+    background: rgba(0,0,0,.35); padding: 4px 10px; border-radius: 10px;
+  }
+  #hint.show { opacity: 1; }
+
+  /* ---------- Overlay screens ---------- */
+  .screen {
+    position: fixed; inset: 0; display: none; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center;
+    padding: 20px; background: radial-gradient(ellipse at 50% 30%, rgba(76,201,240,0.10), rgba(11,16,38,0.90) 60%);
+    overflow-y: auto; touch-action: pan-y;
+  }
+  .screen.show { display: flex; }
+  .card {
+    width: min(94vw, 640px); background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.14); border-radius: 22px; padding: 26px 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  }
+  h1 {
+    margin: 0 0 4px; font-size: clamp(34px, 7vw, 62px); letter-spacing: -1px; line-height: 1;
+    background: linear-gradient(180deg, #fff, var(--cyan)); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 4px 0 rgba(0,0,0,.6));
+  }
+  h2 { margin: 0 0 10px; font-size: clamp(24px, 4vw, 34px); color: var(--gold); }
+  .sub { color: var(--dim); margin: 0 0 18px; font-size: 15px; }
+  .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  button {
+    font: inherit; font-weight: 800; font-size: 17px; color: #07102a;
+    background: linear-gradient(180deg, #7fe0ff, var(--cyan)); border: 0; border-radius: 14px;
+    padding: 13px 22px; cursor: pointer; box-shadow: 0 5px 0 #1c7ea3, 0 10px 20px rgba(0,0,0,.4);
+    transition: transform .08s, box-shadow .08s;
+  }
+  button:active { transform: translateY(4px); box-shadow: 0 1px 0 #1c7ea3; }
+  button.ghost { background: rgba(255,255,255,0.08); color: var(--ink); box-shadow: none; border: 1px solid rgba(255,255,255,0.18); }
+  button.ghost:active { transform: translateY(1px); }
+  button.gold { background: linear-gradient(180deg, #ffe39a, var(--gold)); box-shadow: 0 5px 0 #a87f1a, 0 10px 20px rgba(0,0,0,.4); }
+  button.gold:active { box-shadow: 0 1px 0 #a87f1a; }
+  button:disabled { opacity: .4; cursor: default; }
+  input[type=text] {
+    font: inherit; font-size: 18px; font-weight: 700; color: var(--ink); text-align: center;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px;
+    padding: 10px 14px; width: min(260px, 70vw); outline: none;
+  }
+  input[type=text]:focus { border-color: var(--cyan); }
+
+  /* Level grid */
+  .levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 12px 0 4px; }
+  .lvl {
+    text-align: left; border-radius: 14px; padding: 10px 12px; cursor: pointer;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    transition: transform .08s, background .15s; position: relative;
+  }
+  .lvl:hover { background: rgba(255,255,255,0.10); }
+  .lvl:active { transform: scale(.98); }
+  .lvl .n { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--dim); }
+  .lvl .t { font-size: 17px; font-weight: 800; margin: 2px 0; }
+  .lvl .d { font-size: 12px; color: var(--dim); line-height: 1.3; }
+  .lvl .best { font-size: 12px; color: var(--gold); margin-top: 4px; font-weight: 700; }
+  .lvl.locked { opacity: .45; cursor: default; }
+  .lvl.locked .t::after { content: " 🔒"; }
+  .lvl.cleared { border-color: rgba(93,255,166,0.5); }
+  .lvl.cleared .n::after { content: " · cleared"; color: var(--mint); }
+
+  /* Results */
+  .stats { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 8px 0 12px; }
+  .stat { background: rgba(255,255,255,0.06); border-radius: 12px; padding: 8px 14px; min-width: 90px; }
+  .stat b { display: block; font-size: 24px; color: var(--gold); }
+  .stat span { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; }
+  .review { text-align: left; max-height: 36vh; overflow-y: auto; margin: 6px 0; padding: 4px 2px; touch-action: pan-y; }
+  .review h3 { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); margin: 10px 0 6px; }
+  .review .it { font-size: 15px; padding: 7px 10px; border-radius: 10px; background: rgba(255,255,255,0.05); margin-bottom: 6px; line-height: 1.35; }
+  .review .it b { color: var(--mint); }
+  .review .it small { display: block; color: var(--dim); font-size: 12px; margin-top: 2px; }
+  .board { text-align: left; margin: 10px auto 0; width: 100%; max-width: 420px; }
+  .board .r { display: flex; justify-content: space-between; padding: 6px 10px; border-radius: 8px; font-size: 15px; }
+  .board .r:nth-child(odd) { background: rgba(255,255,255,0.05); }
+  .board .r b { color: var(--gold); }
+  .board .r .me { color: var(--mint); }
+  .how { text-align: left; font-size: 15px; line-height: 1.45; color: var(--ink); }
+  .how p { margin: 6px 0; }
+  .how .k { display: inline-block; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 6px; padding: 0 6px; font-weight: 700; font-size: 13px; }
+  .pw { display: inline-flex; align-items: center; gap: 6px; margin: 3px 8px 3px 0; font-size: 14px; }
+  .pw i { display: inline-block; width: 18px; height: 18px; border-radius: 50%; }
+  .tiny { font-size: 12px; color: var(--dim); margin-top: 12px; }
+  .account { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 2px; font-size: 14px; color: var(--dim); flex-wrap: wrap; }
+  .account img { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3); }
+  .account b { color: var(--ink); }
+  .account button { padding: 7px 14px; font-size: 14px; }
+  .board .r small { color: var(--dim); }
+  .lvl-banner {
+    position: fixed; inset: 0; display: none; align-items: center; justify-content: center; pointer-events: none;
+    flex-direction: column;
+  }
+  .lvl-banner.show { display: flex; animation: bannerIn 2.2s ease forwards; }
+  .lvl-banner .big { font-size: clamp(40px, 9vw, 90px); font-weight: 900; letter-spacing: -2px; color: #fff; text-shadow: 0 0 30px var(--cyan), 0 6px 0 rgba(0,0,0,.6); }
+  .lvl-banner .small { font-size: clamp(16px, 3vw, 26px); color: var(--gold); font-weight: 700; margin-top: 6px; }
+  @keyframes bannerIn { 0% { opacity: 0; transform: scale(.6); } 12% { opacity: 1; transform: scale(1.02); } 80% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.1); } }
+
+  #pauseBtn {
+    position: fixed; right: calc(env(safe-area-inset-right, 0px) + 10px); top: calc(env(safe-area-inset-top, 0px) + 10px);
+    width: 36px; height: 36px; border-radius: 10px; padding: 0; font-size: 16px;
+    background: rgba(255,255,255,0.08); color: var(--ink); box-shadow: none; border: 1px solid rgba(255,255,255,0.18);
+    display: none; z-index: 5;
+  }
+  #pauseBtn.show { display: block; }
+  #muteBtn { position: fixed; left: calc(env(safe-area-inset-left, 0px) + 10px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    width: 36px; height: 36px; border-radius: 10px; padding: 0; font-size: 16px; z-index: 5;
+    background: rgba(255,255,255,0.08); color: var(--ink); box-shadow: none; border: 1px solid rgba(255,255,255,0.18); }
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="game"></canvas></div>
+<div id="prompt"></div>
+<div id="hint"></div>
+<button id="pauseBtn" title="Pause (P)">⏸</button>
+<button id="muteBtn" title="Sound on/off (M)">🔊</button>
+
+<div class="lvl-banner" id="banner"><div class="big" id="bannerBig"></div><div class="small" id="bannerSmall"></div></div>
+
+<!-- Title -->
+<div class="screen show" id="titleScreen">
+  <div class="card">
+    <h1>PREPOSITION<br>BLASTER</h1>
+    <p class="sub">to or for? with or from? in, on, or at? Blast the right word.</p>
+    <div><input type="text" id="nameInput" maxlength="16" placeholder="Your name, pilot" autocomplete="off"></div>
+    <div class="account" id="account"><button class="ghost" id="signInBtn">Sign in with Google to post scores</button></div>
+    <div class="row">
+      <button id="playBtn">▶ Play</button>
+      <button class="ghost" id="howBtn">How to play</button>
+      <button class="ghost" id="scoresBtn">High scores</button>
+    </div>
+    <div class="levels" id="levelGrid"></div>
+    <p class="tiny" id="saveNote"></p>
+  </div>
+</div>
+
+<!-- How to play -->
+<div class="screen" id="howScreen">
+  <div class="card">
+    <h2>How to play</h2>
+    <div class="how">
+      <p>A sentence appears with a missing word. Words fall from space. <b>Shoot the one that fits.</b> Let the wrong ones fall away.</p>
+      <p><b>Laptop:</b> <span class="k">←</span> <span class="k">→</span> move, <span class="k">space</span> or <span class="k">↑</span> fire. <span class="k">P</span> pause, <span class="k">M</span> mute.</p>
+      <p><b>Phone or tablet:</b> tap a word to fly under it and fire. Drag to move. Tap empty space to fire straight up.</p>
+      <p>A wrong shot costs a heart and shows you the right answer. Letting the right word escape costs a heart too. Speed and streaks score big.</p>
+      <p><b>Power-ups</b> (shoot them or fly through them):
+        <span class="pw"><i style="background:#4cc9f0"></i>Shield: blocks one mistake</span>
+        <span class="pw"><i style="background:#b388ff"></i>Slow-mo</span>
+        <span class="pw"><i style="background:#ffd166"></i>Hint: one wrong word explodes</span>
+        <span class="pw"><i style="background:#ff9f43"></i>2x points</span>
+      </p>
+      <p><b>Lander bonus:</b> gravity! <span class="k">↑</span> or hold the screen to thrust, <span class="k">←</span> <span class="k">→</span> or drag to steer. Set down gently on the right pad.</p>
+      <p><b>Boss:</b> a long text with many blanks. Hit the right word for each one. The boss shoots back. Dodge.</p>
+    </div>
+    <div class="row"><button class="ghost" id="howBack">Back</button></div>
+  </div>
+</div>
+
+<!-- High scores -->
+<div class="screen" id="scoresScreen">
+  <div class="card">
+    <h2>High scores</h2>
+    <p class="sub" id="boardNote">Stored on this device for now.</p>
+    <div class="account" id="boardAccount"></div>
+    <div class="board" id="board"></div>
+    <div class="row"><button class="ghost" id="scoresBack">Back</button></div>
+  </div>
+</div>
+
+<!-- Pause -->
+<div class="screen" id="pauseScreen">
+  <div class="card">
+    <h2>Paused</h2>
+    <div class="row">
+      <button id="resumeBtn">Resume</button>
+      <button class="ghost" id="quitBtn">Quit to menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- Level complete / game over -->
+<div class="screen" id="endScreen">
+  <div class="card">
+    <h2 id="endTitle">Level complete</h2>
+    <p class="sub" id="endSub"></p>
+    <div class="stats">
+      <div class="stat"><b id="stScore">0</b><span>score</span></div>
+      <div class="stat"><b id="stAcc">0%</b><span>accuracy</span></div>
+      <div class="stat"><b id="stStreak">0</b><span>best streak</span></div>
+    </div>
+    <div class="review" id="review"></div>
+    <div class="row">
+      <button id="nextBtn">Next level ▶</button>
+      <button class="ghost" id="replayBtn">Replay</button>
+      <button class="ghost" id="menuBtn">Menu</button>
+    </div>
+  </div>
+</div>
+
+<script src="items.js"></script>
+<script src="leaderboard.js"></script>
+<script>
+(() => {
+'use strict';
+
+// ============================================================
+// Utilities
+// ============================================================
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const shuffle = (arr) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dist2 = (ax, ay, bx, by) => (ax - bx) ** 2 + (ay - by) ** 2;
+
+// ============================================================
+// Audio (synthesized, no files)
+// ============================================================
+const Sfx = (() => {
+  let ctx = null, master = null, muted = false, thrustNode = null, thrustGain = null;
+  function ensure() {
+    if (!ctx) {
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      master = ctx.createGain(); master.gain.value = 0.5; master.connect(ctx.destination);
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(freq, type, dur, vol = 0.2, slideTo = null, when = 0) {
+    if (muted) return; const c = ensure(); const t0 = c.currentTime + when;
+    const o = c.createOscillator(); const g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), t0 + dur);
+    g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0005, t0 + dur);
+    o.connect(g).connect(master); o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  function noise(dur = 0.2, vol = 0.3, lowpass = 2000, when = 0) {
+    if (muted) return; const c = ensure(); const t0 = c.currentTime + when;
+    const n = Math.floor(c.sampleRate * dur); const buf = c.createBuffer(1, n, c.sampleRate);
+    const d = buf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(); src.buffer = buf;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(lowpass, t0); f.frequency.exponentialRampToValueAtTime(100, t0 + dur);
+    const g = c.createGain(); g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0005, t0 + dur);
+    src.connect(f).connect(g).connect(master); src.start(t0);
+  }
+  return {
+    unlock() { try { ensure(); } catch (e) { /* no audio */ } },
+    toggleMute() { muted = !muted; if (muted) this.thrust(false); return muted; },
+    get muted() { return muted; },
+    laser() { tone(880, 'square', 0.12, 0.12, 220); },
+    pew() { tone(1200, 'triangle', 0.08, 0.08, 400); },
+    boom() { noise(0.35, 0.35, 1800); tone(90, 'sawtooth', 0.3, 0.2, 40); },
+    crumble() { noise(0.25, 0.2, 900); },
+    right() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 'triangle', 0.18, 0.16, null, i * 0.07)); },
+    wrong() { tone(160, 'sawtooth', 0.35, 0.22, 80); tone(120, 'square', 0.35, 0.12, 60, 0.05); },
+    hurt() { noise(0.3, 0.3, 600); tone(200, 'square', 0.3, 0.2, 50); },
+    power() { [700, 900, 1200, 1600, 2100].forEach((f, i) => tone(f, 'sine', 0.12, 0.14, null, i * 0.05)); },
+    shieldPop() { tone(1400, 'sine', 0.25, 0.2, 300); noise(0.15, 0.15, 3000); },
+    combo(n) { tone(600 + n * 60, 'triangle', 0.1, 0.1, 900 + n * 80); },
+    bossHit() { tone(300, 'square', 0.2, 0.2, 120); noise(0.2, 0.25, 1200); },
+    bossRoar() { tone(70, 'sawtooth', 0.9, 0.3, 45); tone(105, 'sawtooth', 0.9, 0.2, 60, 0.05); noise(0.6, 0.15, 400, 0.1); },
+    bossDie() { for (let i = 0; i < 6; i++) { noise(0.5, 0.3, 1500, i * 0.12); tone(120 - i * 10, 'sawtooth', 0.5, 0.2, 30, i * 0.12); } },
+    fanfare() { [523, 659, 784, 1046, 784, 1046, 1318].forEach((f, i) => tone(f, 'square', 0.22, 0.12, null, i * 0.11)); },
+    land() { [392, 523, 659].forEach((f, i) => tone(f, 'triangle', 0.3, 0.18, null, i * 0.1)); },
+    crash() { noise(0.6, 0.4, 1200); tone(100, 'sawtooth', 0.5, 0.25, 30); },
+    tick() { tone(1500, 'square', 0.03, 0.05); },
+    alarm() { tone(880, 'square', 0.1, 0.1); tone(660, 'square', 0.1, 0.1, null, 0.12); },
+    thrust(on) {
+      if (muted && on) return;
+      if (on && !thrustNode) {
+        const c = ensure(); const n = Math.floor(c.sampleRate * 1.0); const buf = c.createBuffer(1, n, c.sampleRate);
+        const d = buf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+        thrustNode = c.createBufferSource(); thrustNode.buffer = buf; thrustNode.loop = true;
+        const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 500;
+        thrustGain = c.createGain(); thrustGain.gain.value = 0.0001;
+        thrustNode.connect(f).connect(thrustGain).connect(master); thrustNode.start();
+        thrustGain.gain.exponentialRampToValueAtTime(0.22, c.currentTime + 0.08);
+      } else if (!on && thrustNode) {
+        const c = ctx; const node = thrustNode, g = thrustGain; thrustNode = null; thrustGain = null;
+        g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.12); node.stop(c.currentTime + 0.15);
+      }
+    },
+  };
+})();
+
+// ============================================================
+// Canvas + sizing
+// ============================================================
+const canvas = $('game'); const ctx = canvas.getContext('2d');
+let W = 900, H = 600, DPR = 1;
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = Math.floor(W * DPR); canvas.height = Math.floor(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  layoutStars();
+}
+window.addEventListener('resize', resize);
+
+// Where the playfield lives (below the sentence box, above the ship)
+function promptBottom() {
+  const el = $('prompt'); if (!el.classList.contains('show')) return 100;
+  return el.getBoundingClientRect().bottom + 10;
+}
+const isTouch = matchMedia('(pointer: coarse)').matches;
+
+// ============================================================
+// Stars
+// ============================================================
+let stars = [];
+function layoutStars() {
+  stars = [];
+  const n = Math.floor((W * H) / 6000);
+  for (let i = 0; i < n; i++) stars.push({ x: Math.random() * W, y: Math.random() * H, z: Math.random(), tw: Math.random() * 6.28 });
+}
+
+// ============================================================
+// Game state
+// ============================================================
+const CONTENT = window.PB_CONTENT;
+const LEVELS = CONTENT.levels;
+const LIVES_MAX = 4;
+
+let save = PBLeaderboard.loadProgress() || { name: '', unlocked: 1, cleared: {}, best: {}, items: {} };
+PBLeaderboard.onProgress((merged) => { save = merged; if (state === 'title') renderTitle(); });
+PBLeaderboard.onAuth(() => { renderAccount(); if (state === 'title') renderTitle(); });
+PBLeaderboard.init();
+let state = 'title';   // title | playing | paused | end
+let lvlIndex = 0, level = null, waves = [], waveIdx = -1, wave = null;
+let score = 0, lives = LIVES_MAX, streak = 0, bestStreak = 0, right = 0, wrong = 0;
+let runScore = 0;      // score across levels in one sitting (for the leaderboard)
+let runCleared = 0;
+let multiplier = 1, multiShots = 0, slowT = 0, shield = false;
+let shake = 0, flash = 0, flashColor = '255,255,255', timeScale = 1;
+let missedItems = [];  // for the end-screen review
+let lastT = 0, running = false;
+
+// entities
+const ship = { x: 0, y: 0, w: 46, h: 34, vx: 0, vy: 0, targetX: null, autoFire: false, tilt: 0, cool: 0, alive: true, angle: 0, fuel: 1, thrusting: false, landed: false };
+let bullets = [], targets = [], powerups = [], particles = [], floaters = [], enemyBullets = [], debris = [];
+let boss = null;
+
+// pointer / keys
+const keys = { left: false, right: false, fire: false, up: false, firePressed: false };
+let pointer = { down: false, x: 0, y: 0 };
+
+// ============================================================
+// Prompt rendering
+// ============================================================
+const promptEl = $('prompt');
+function renderPrompt(item, opts = {}) {
+  // item.s contains ___ for the blank. opts: {fill:'word', status:'right'|'wrong', wrongWord, tip, kicker}
+  const parts = item.s.split('___');
+  let html = '';
+  if (opts.kicker) html += `<span class="kicker">${esc(opts.kicker)}</span>`;
+  html += esc(parts[0]);
+  if (opts.status === 'right') html += `<span class="blank done right">${esc(dispWord(opts.fill))}</span>`;
+  else if (opts.status === 'wrong') html += `<span class="blank done wrong"><span class="strike">${esc(dispWord(opts.wrongWord))}</span><span class="fix">${esc(dispWord(item.a))}</span></span>`;
+  else html += `<span class="blank">___</span>`;
+  html += esc(parts.slice(1).join('___'));
+  if (opts.tip) html += `<span class="tip">${esc(opts.tip)}</span>`;
+  promptEl.innerHTML = html; promptEl.classList.add('show');
+}
+function renderBossPrompt(bossDef, idx, opts = {}) {
+  const parts = bossDef.text.split('___');
+  let html = `<span class="kicker">${esc(bossDef.name)} · ${opts.hp} ❤ left</span>`;
+  for (let i = 0; i < parts.length; i++) {
+    html += esc(parts[i]);
+    if (i < bossDef.blanks.length) {
+      const b = bossDef.blanks[i];
+      if (i < idx) html += `<span class="blank done right">${esc(dispWord(b.a))}</span>`;
+      else if (i === idx) {
+        if (opts.status === 'wrong') html += `<span class="blank done wrong"><span class="strike">${esc(dispWord(opts.wrongWord))}</span><span class="fix">${esc(dispWord(b.a))}</span></span>`;
+        else if (opts.status === 'right') html += `<span class="blank done right">${esc(dispWord(b.a))}</span>`;
+        else html += `<span class="blank current">___</span>`;
+      } else html += `<span class="blank pending">___</span>`;
+    }
+  }
+  if (opts.tip) html += `<span class="tip">${esc(opts.tip)}</span>`;
+  promptEl.innerHTML = html; promptEl.classList.add('show');
+}
+function hidePrompt() { promptEl.classList.remove('show'); }
+function setHint(text) { const h = $('hint'); if (text) { h.textContent = text; h.classList.add('show'); } else h.classList.remove('show'); }
+
+// ============================================================
+// Level planning
+// ============================================================
+function itemKey(item) { return item.s + '|' + item.a; }
+function weightedItems(pool, n) {
+  // prefer items the player has missed before, then unseen ones
+  const scored = pool.map(it => {
+    const rec = save.items[itemKey(it)] || { right: 0, wrong: 0 };
+    const w = 1 + rec.wrong * 2.5 - rec.right * 0.6 + (rec.right + rec.wrong === 0 ? 0.8 : 0) + Math.random() * 1.2;
+    return { it, w };
+  });
+  scored.sort((a, b) => b.w - a.w);
+  return scored.slice(0, n).map(s => s.it);
+}
+function planLevel(lvl) {
+  const pool = lvl.pool;
+  const shortOnes = pool.filter(i => i.s.length <= 34);
+  const plan = [];
+  const drifts = shuffle(weightedItems(shortOnes.length >= 3 ? shortOnes : pool, 3));
+  drifts.forEach(it => plan.push({ type: 'drift', item: it }));
+  const used = new Set(drifts.map(itemKey));
+  const rest = shuffle(weightedItems(pool.filter(i => !used.has(itemKey(i))), 14));
+  const sentences = rest.slice(0, 7), rushItems = rest.slice(7, 13), landItem = rest[13] || pick(pool);
+  sentences.slice(0, 2).forEach(it => plan.push({ type: 'sentence', item: it }));
+  plan.push({ type: 'rush', items: rushItems.length >= 4 ? rushItems : shuffle(pool).slice(0, 5) });
+  sentences.slice(2, 4).forEach(it => plan.push({ type: 'sentence', item: it }));
+  plan.push({ type: 'lander', item: landItem });
+  sentences.slice(4, 7).forEach(it => plan.push({ type: 'sentence', item: it }));
+  plan.push({ type: 'boss', boss: lvl.boss });
+  return plan;
+}
+
+// ============================================================
+// Wave construction
+// ============================================================
+function makeTarget(word, correct, x, y, vy, r) {
+  const n = 8 + Math.floor(Math.random() * 4);
+  const pts = []; for (let i = 0; i < n; i++) pts.push(rand(0.75, 1.1));
+  return { kind: 'rock', word, correct, x, y, vx: rand(-14, 14), vy, r, rot: rand(0, 6.28), rotV: rand(-0.6, 0.6), pts, hue: rand(200, 260), alive: true, flash: 0, spawn: 0 };
+}
+function wordRadius(word, lanes = 1) {
+  const base = clamp(26 + word.length * 5, 34, 66) * (W < 480 ? 0.74 : W < 760 ? 0.86 : 1);
+  const laneW = (W - 100) / lanes;
+  return Math.min(base, laneW * 0.47);
+}
+const dispWord = (w) => (w === 'nothing' ? 'no word' : w);
+
+function startWave(w) {
+  wave = w; bullets = []; targets = []; powerups = []; enemyBullets = []; boss = null;
+  wave.t = 0; wave.resolved = false; wave.feedbackT = 0; wave.spawnedPower = 0; wave.nextPower = rand(3.5, 6);
+  ship.alive = true; ship.landed = false; ship.angle = 0; ship.vx = 0; ship.vy = 0; ship.targetX = null; ship.autoFire = false;
+  ship.y = H - 70 - (isTouch ? 30 : 0);
+  Sfx.thrust(false);
+  const speedMul = level.speed || 1;
+  const top = promptBottom();
+
+  if (w.type === 'drift' || w.type === 'sentence') {
+    const item = w.item; const nOpts = w.type === 'drift' ? Math.min(2, 1 + item.d.length) : Math.min(level.maxOptions || 4, 1 + item.d.length);
+    renderPrompt(item, { kicker: w.type === 'drift' ? 'Quick one' : level.name });
+    const words = shuffle([item.a, ...shuffle(item.d).slice(0, nOpts - 1)]);
+    const lanes = words.length;
+    const maxR = Math.max(...words.map(wd => wordRadius(wd, lanes)));
+    // Keep the rocks close together: a band just wide enough for the lanes, centred.
+    const band = Math.min(W - 80, lanes * (maxR * 2 + 36));
+    const margin = (W - band) / 2;
+    const laneW = band / lanes;
+    const order = shuffle(words.map((_, i) => i));
+    const crowded = lanes * maxR * 2 > band * 0.82;
+    words.forEach((word, i) => {
+      const lane = order[i];
+      const jitter = crowded ? 0 : laneW * 0.12;
+      const x = margin + laneW * lane + laneW / 2 + rand(-jitter, jitter);
+      const baseV = (w.type === 'drift' ? 46 : 58) * speedMul * (H / 700);
+      const r = wordRadius(word, lanes);
+      const t = makeTarget(word, word === item.a, x, top + r + 6 + i * (crowded ? r * 1.7 : 10), baseV * rand(0.9, 1.15), r);
+      if (crowded) { t.vx = 0; t.vy = baseV; }
+      targets.push(t);
+    });
+    setHint(isTouch ? 'Tap the word that fits' : '← → move · space fires');
+  } else if (w.type === 'rush') {
+    wave.items = w.items.slice(); wave.rushIdx = 0; wave.rushRight = 0; wave.timeLeft = 24;
+    showBanner('RUSH!', 'Quick phrases. Speed counts.'); Sfx.alarm();
+    nextRushItem();
+  } else if (w.type === 'lander') {
+    const item = w.item;
+    renderPrompt(item, { kicker: 'Lander bonus · land on the right pad' });
+    const words = shuffle([item.a, ...shuffle(item.d).slice(0, 2)]);
+    wave.pads = words.map((word, i) => {
+      const padW = clamp(W / (words.length * 1.7), 90, 180);
+      const x = (W / (words.length + 1)) * (i + 1);
+      const hgt = [60, 110, 80][i % 3] + rand(-10, 10);
+      return { word, correct: word === item.a, x, w: padW, y: H - hgt, hit: false };
+    });
+    ship.x = W / 2; ship.y = top + 60; ship.vx = rand(-30, 30); ship.vy = 0; ship.fuel = 1; ship.angle = 0; ship.landed = false;
+    wave.timeLeft = 30; wave.gravity = 120 * (H / 700);
+    showBanner('LANDER', 'Thrust gently. Land on the right word.'); Sfx.power();
+    setHint(isTouch ? 'Hold to thrust · drag left/right to steer' : '↑ thrust · ← → steer');
+  } else if (w.type === 'boss') {
+    const def = w.boss;
+    boss = { def, x: W / 2, y: top + 98, w: Math.min(220, W * 0.45), h: 90, hp: def.blanks.length, maxHp: def.blanks.length, blankIdx: 0, t: 0, fireT: 2.5, angry: 0, orbit: 0, dying: 0, options: [] };
+    renderBossPrompt(def, 0, { hp: boss.hp });
+    spawnBossOptions();
+    showBanner('BOSS', def.name); Sfx.bossRoar(); shake = 10;
+    setHint(isTouch ? 'Tap the right word for the glowing blank · dodge the shots' : 'Fill the glowing blank · dodge');
+  }
+}
+
+function spawnBossOptions() {
+  const b = boss.def.blanks[boss.blankIdx];
+  const words = shuffle([b.a, ...shuffle(b.d).slice(0, Math.min(3, b.d.length))]);
+  boss.options = words.map((word, i) => ({ kind: 'orb', word, correct: word === b.a, ang: (i / words.length) * Math.PI * 2, r: wordRadius(word, words.length) * 0.9, x: boss.x, y: boss.y, alive: true, flash: 0 }));
+  boss.orbitR = Math.min(W * 0.3, 170);
+  boss.orbitSpeed = (0.45 + lvlIndex * 0.07) * (Math.random() < 0.5 ? 1 : -1);
+}
+
+function nextRushItem() {
+  if (wave.rushIdx >= wave.items.length) { finishWave(); return; }
+  const item = wave.items[wave.rushIdx]; wave.item = item; targets = [];
+  renderPrompt(item, { kicker: `Rush ${wave.rushIdx + 1}/${wave.items.length}` });
+  const words = shuffle([item.a, ...shuffle(item.d).slice(0, 2)]);
+  const maxR = Math.max(...words.map(wd => wordRadius(wd, words.length)));
+  const band = Math.min(W - 80, words.length * (maxR * 2 + 36)); const margin = (W - band) / 2, laneW = band / words.length; const top = promptBottom();
+  words.forEach((word, i) => {
+    const r = wordRadius(word, words.length) * 0.95;
+    const t = makeTarget(word, word === item.a, margin + laneW * i + laneW / 2, top + r + 10, 0, r);
+    t.vx = 0; t.rotV *= 0.3; t.kind = 'invader'; t.baseX = t.x; t.wob = rand(0, 6.28);
+    targets.push(t);
+  });
+}
+
+function showBanner(big, small) {
+  const b = $('banner'); $('bannerBig').textContent = big; $('bannerSmall').textContent = small || '';
+  b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+}
+
+// ============================================================
+// Scoring + feedback
+// ============================================================
+function recordItem(item, ok) {
+  const k = itemKey(item); const rec = save.items[k] || { right: 0, wrong: 0 };
+  if (ok) rec.right++; else rec.wrong++;
+  save.items[k] = rec; PBLeaderboard.saveProgress(save);
+}
+function addScore(n, x, y, color = '#ffd166') {
+  const pts = Math.round(n * multiplier);
+  score += pts; runScore += pts;
+  floaters.push({ x, y, text: '+' + pts, color, t: 0, vy: -40 });
+  if (multiplier > 1 && multiShots > 0) { multiShots--; if (multiShots === 0) multiplier = 1; }
+}
+function loseLife(x, y) {
+  if (shield) { shield = false; Sfx.shieldPop(); floaters.push({ x, y, text: 'shield!', color: '#4cc9f0', t: 0, vy: -30 }); return false; }
+  lives--; Sfx.hurt(); shake = 14; flash = 0.5; flashColor = '255,80,80';
+  floaters.push({ x, y, text: '💔', color: '#ff6b6b', t: 0, vy: -30 });
+  return lives <= 0;
+}
+function resolveRight(item, x, y, bonusText) {
+  right++; streak++; bestStreak = Math.max(bestStreak, streak);
+  recordItem(item, true);
+  const speedBonus = wave.type === 'rush' ? 60 : Math.max(0, Math.round(120 - wave.t * 12));
+  const base = (wave.type === 'drift' ? 100 : 150) + speedBonus + Math.min(streak, 10) * 20;
+  addScore(base, x, y);
+  if (streak >= 3) { floaters.push({ x, y: y - 28, text: streak + ' streak!', color: '#5dffa6', t: 0, vy: -20 }); Sfx.combo(streak); }
+  Sfx.right(); explode(x, y, '#5dffa6', 26);
+  if (wave.type === 'rush') { renderPrompt(item, { kicker: `Rush ${wave.rushIdx + 1}/${wave.items.length}`, fill: item.a, status: 'right' }); }
+  else renderPrompt(item, { fill: item.a, status: 'right', kicker: bonusText || 'Nice' });
+}
+function resolveWrong(item, wrongWord, x, y) {
+  wrong++; streak = 0; recordItem(item, false); missedItems.push({ item, wrongWord });
+  Sfx.wrong(); explode(x, y, '#ff6b6b', 14);
+  renderPrompt(item, { status: 'wrong', wrongWord, tip: item.tip || level.tip, kicker: wrongWord === '(escaped)' ? 'It got away' : 'Not that one' });
+  return loseLife(x, y);
+}
+function finishWave() {
+  wave.resolved = true; wave.feedbackT = 0.01;
+}
+function explode(x, y, color, n = 20, speed = 220) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = rand(speed * 0.3, speed);
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: rand(0.4, 0.9), t: 0, color, size: rand(2, 5) });
+  }
+}
+function shatter(t) {
+  // grey rock debris for a wrong-word asteroid
+  for (let i = 0; i < 7; i++) {
+    const a = Math.random() * Math.PI * 2, s = rand(60, 180);
+    debris.push({ x: t.x, y: t.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40, r: t.r * rand(0.15, 0.35), rot: rand(0, 6), rotV: rand(-5, 5), life: rand(0.5, 1), t: 0 });
+  }
+}
+
+// ============================================================
+// Update
+// ============================================================
+function update(dt) {
+  shake = Math.max(0, shake - dt * 40); flash = Math.max(0, flash - dt * 1.6);
+  for (const s of stars) { s.y += (8 + s.z * 40) * dt * (wave && wave.type === 'lander' ? 0.2 : 1); if (s.y > H) { s.y = -2; s.x = Math.random() * W; } }
+  particles.forEach(p => { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.97; p.vy *= 0.97; });
+  particles = particles.filter(p => p.t < p.life);
+  debris.forEach(d => { d.t += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 300 * dt; d.rot += d.rotV * dt; });
+  debris = debris.filter(d => d.t < d.life);
+  floaters.forEach(f => { f.t += dt; f.y += f.vy * dt; });
+  floaters = floaters.filter(f => f.t < 1.1);
+  if (!wave) return;
+
+  // feedback pause after a wave resolves
+  if (wave.resolved) {
+    wave.feedbackT += dt;
+    const needed = wave.type === 'rush' && wave.rushIdx < wave.items.length ? (wave.lastOk ? 0.55 : 1.6) : (wave.lastOk ? 0.9 : 2.1);
+    if (wave.feedbackT >= needed) {
+      if (lives <= 0) { gameOver(); return; }
+      if (wave.type === 'rush' && wave.rushIdx < wave.items.length) { wave.resolved = false; wave.rushIdx++; nextRushItem(); return; }
+      if (wave.type === 'boss' && boss && boss.hp > 0) { wave.resolved = false; boss.blankIdx++; renderBossPrompt(boss.def, boss.blankIdx, { hp: boss.hp }); spawnBossOptions(); return; }
+      nextWave();
+    }
+    return;
+  }
+  wave.t += dt;
+  if (slowT > 0) { slowT -= dt; timeScale = 0.45; } else timeScale = 1;
+  const sdt = dt * timeScale;
+
+  if (wave.type === 'lander') { updateLander(dt); return; }
+
+  updateShip(dt);
+  updateBullets(sdt);
+  if (wave.type === 'boss') updateBoss(sdt, dt); else updateTargets(sdt);
+  updatePowerups(sdt);
+}
+
+function updateShip(dt) {
+  const speed = 700;
+  let dir = 0;
+  if (keys.left) dir -= 1; if (keys.right) dir += 1;
+  if (ship.targetX !== null) {
+    const dx = ship.targetX - ship.x;
+    if (Math.abs(dx) > 6) dir = Math.sign(dx) * Math.min(1, Math.abs(dx) / 60);
+    else { ship.x = ship.targetX; ship.targetX = null; if (ship.autoFire) { fire(); ship.autoFire = false; } }
+  }
+  ship.vx = lerp(ship.vx, dir * speed, 1 - Math.pow(0.001, dt));
+  ship.x = clamp(ship.x + ship.vx * dt, 30, W - 30);
+  ship.tilt = lerp(ship.tilt, ship.vx / speed, 1 - Math.pow(0.01, dt));
+  ship.cool = Math.max(0, ship.cool - dt);
+  if ((keys.fire || keys.firePressed) && ship.cool <= 0) { fire(); }
+  keys.firePressed = false;
+}
+function fire() {
+  if (ship.cool > 0 || !ship.alive) return;
+  ship.cool = 0.22; Sfx.laser();
+  bullets.push({ x: ship.x, y: ship.y - 22, vy: -980 });
+  particles.push({ x: ship.x, y: ship.y - 20, vx: 0, vy: -60, life: 0.15, t: 0, color: '#fff', size: 6 });
+}
+function updateBullets(dt) {
+  bullets.forEach(b => { b.y += b.vy * dt; });
+  bullets = bullets.filter(b => b.y > -30);
+  for (const b of bullets) {
+    // powerups first
+    for (const p of powerups) { if (p.alive && dist2(b.x, b.y, p.x, p.y) < (p.r + 6) ** 2) { collectPower(p); b.y = -99; break; } }
+    if (b.y < 0) continue;
+    const list = wave.type === 'boss' ? boss.options : targets;
+    for (const t of list) {
+      if (!t.alive) continue;
+      if (dist2(b.x, b.y, t.x, t.y) < (t.r + 5) ** 2) { b.y = -99; hitTarget(t); break; }
+    }
+  }
+  bullets = bullets.filter(b => b.y > -30);
+}
+function hitTarget(t) {
+  t.alive = false;
+  if (wave.type === 'boss') { hitBossOption(t); return; }
+  const item = wave.item;
+  if (t.correct) {
+    wave.lastOk = true;
+    // other rocks shatter harmlessly
+    targets.forEach(o => { if (o.alive) { o.alive = false; shatter(o); } });
+    resolveRight(item, t.x, t.y);
+    if (wave.type === 'rush') wave.rushRight++;
+    finishWave();
+  } else {
+    wave.lastOk = false; shatter(t); Sfx.crumble();
+    targets.forEach(o => { if (o.alive) o.vy = 0; });
+    const dead = resolveWrong(item, t.word, t.x, t.y);
+    finishWave();
+  }
+}
+function updateTargets(dt) {
+  const floor = ship.y - 10;
+  for (const t of targets) {
+    if (!t.alive) continue;
+    t.rot += t.rotV * dt; t.flash = Math.max(0, t.flash - dt * 4); t.spawn = Math.min(1, (t.spawn || 0) + dt * 3);
+    if (t.kind === 'invader') {
+      // rush: side-to-side march that sinks slowly
+      t.wob += dt * 1.6; t.x = t.baseX + Math.sin(t.wob) * Math.min(40, W * 0.05); t.y += 16 * (level.speed || 1) * dt;
+    } else {
+      t.x += t.vx * dt; t.y += t.vy * dt;
+      const lo = Math.max(t.r, W * 0.18), hi = Math.min(W - t.r, W * 0.82);
+      if (t.x < lo) { t.x = lo; t.vx = Math.abs(t.vx); } if (t.x > hi) { t.x = hi; t.vx = -Math.abs(t.vx); }
+      // gentle drift toward the ship's lane in later levels: keeps things lively
+      if (lvlIndex >= 3 && t.correct === false && Math.random() < 0.002) t.vx += rand(-30, 30);
+    }
+    if (t.y + t.r > floor) {
+      if (t.correct) {
+        t.alive = false; wave.lastOk = false; Sfx.wrong();
+        targets.forEach(o => { o.alive = false; });
+        resolveWrong(wave.item, '(escaped)', t.x, floor - 20);
+        finishWave(); return;
+      } else { t.alive = false; shatter(t); Sfx.crumble(); }
+    }
+  }
+  // rush timer
+  if (wave.type === 'rush') {
+    wave.timeLeft -= dt;
+    if (wave.timeLeft <= 0) { wave.rushIdx = wave.items.length; finishWave(); }
+  }
+}
+
+// ---------- Powerups ----------
+const POWER = {
+  shield: { color: '#4cc9f0', glyph: '🛡', label: 'SHIELD' },
+  slow: { color: '#b388ff', glyph: '⏱', label: 'SLOW-MO' },
+  hint: { color: '#ffd166', glyph: '💡', label: 'HINT' },
+  x2: { color: '#ff9f43', glyph: '×2', label: '2X POINTS' },
+};
+function updatePowerups(dt) {
+  if (wave.type === 'sentence' || wave.type === 'drift' || wave.type === 'boss') {
+    if (wave.t > wave.nextPower && wave.spawnedPower < 1) {
+      wave.spawnedPower++;
+      const type = pick(Object.keys(POWER)); const x = rand(50, W - 50);
+      powerups.push({ type, x, y: promptBottom() + 24, vy: 70 * (H / 700), r: 20, alive: true, rot: 0, bob: rand(0, 6) });
+    }
+  }
+  for (const p of powerups) {
+    if (!p.alive) continue; p.y += p.vy * dt; p.rot += dt * 2; p.bob += dt * 3;
+    if (Math.abs(p.x - ship.x) < p.r + 24 && Math.abs(p.y - ship.y) < p.r + 18) collectPower(p);
+    if (p.y > H + 30) p.alive = false;
+  }
+  powerups = powerups.filter(p => p.alive);
+}
+function collectPower(p) {
+  p.alive = false; Sfx.power(); explode(p.x, p.y, POWER[p.type].color, 18, 160);
+  floaters.push({ x: p.x, y: p.y, text: POWER[p.type].label, color: POWER[p.type].color, t: 0, vy: -35 });
+  if (p.type === 'shield') shield = true;
+  if (p.type === 'slow') slowT = 6;
+  if (p.type === 'x2') { multiplier = 2; multiShots = 3; }
+  if (p.type === 'hint') {
+    const list = wave.type === 'boss' ? boss.options : targets;
+    const wrongs = list.filter(t => t.alive && !t.correct);
+    if (wrongs.length) { const t = pick(wrongs); t.alive = false; shatter(t); explode(t.x, t.y, '#ffd166', 10); Sfx.crumble(); }
+  }
+}
+
+// ---------- Boss ----------
+function updateBoss(dt, rawDt) {
+  boss.t += dt; boss.orbit += boss.orbitSpeed * dt; boss.angry = Math.max(0, boss.angry - rawDt * 2);
+  boss.x = W / 2 + Math.sin(boss.t * 0.5) * Math.min(80, W * 0.12);
+  const baseY = promptBottom() + 88; boss.y = baseY + Math.sin(boss.t * 1.3) * 10;
+  const alive = boss.options.filter(o => o.alive);
+  boss.options.forEach(o => {
+    if (!o.alive) return; o.ang += boss.orbitSpeed * dt; o.flash = Math.max(0, o.flash - rawDt * 4);
+    const ry = Math.min(80, boss.orbitR * 0.4);
+    o.x = boss.x + Math.cos(o.ang) * boss.orbitR; o.y = boss.y + 125 + Math.sin(o.ang) * ry;
+    o.x = clamp(o.x, o.r, W - o.r);
+  });
+  // boss fires
+  boss.fireT -= dt;
+  if (boss.fireT <= 0) {
+    boss.fireT = Math.max(1.1, 2.6 - lvlIndex * 0.2) + Math.random();
+    const dx = ship.x - boss.x, dy = ship.y - boss.y, L = Math.hypot(dx, dy) || 1, sp = 190 + lvlIndex * 18;
+    enemyBullets.push({ x: boss.x, y: boss.y + 40, vx: dx / L * sp, vy: dy / L * sp, r: 7, t: 0 });
+    Sfx.pew();
+  }
+  enemyBullets.forEach(b => { b.x += b.vx * dt; b.y += b.vy * dt; b.t += dt; });
+  for (const b of enemyBullets) {
+    if (Math.abs(b.x - ship.x) < 22 && Math.abs(b.y - ship.y) < 16) {
+      b.t = 99; explode(ship.x, ship.y, '#ff6b6b', 16);
+      const dead = loseLife(ship.x, ship.y - 30);
+      if (dead) { wave.lastOk = false; finishWave(); }
+    }
+  }
+  enemyBullets = enemyBullets.filter(b => b.t < 8 && b.y < H + 20 && b.x > -20 && b.x < W + 20);
+  // player bullets hitting the boss body do nothing but sparks
+  for (const b of bullets) { if (Math.abs(b.x - boss.x) < boss.w / 2 && Math.abs(b.y - boss.y) < boss.h / 2) { b.y = -99; particles.push({ x: b.x, y: b.y + 20, vx: rand(-40, 40), vy: 40, life: 0.2, t: 0, color: '#b388ff', size: 3 }); } }
+  bullets = bullets.filter(b => b.y > -30);
+}
+function hitBossOption(o) {
+  const b = boss.def.blanks[boss.blankIdx];
+  const pseudoItem = { s: '___', a: b.a, d: b.d, tip: b.tip };
+  if (o.correct) {
+    boss.hp--; wave.lastOk = true; right++; streak++; bestStreak = Math.max(bestStreak, streak);
+    Sfx.bossHit(); Sfx.right(); shake = 8; explode(o.x, o.y, '#5dffa6', 24); explode(boss.x, boss.y, '#b388ff', 14);
+    boss.options.forEach(x => { if (x.alive) { x.alive = false; shatter(x); } });
+    addScore(220 + Math.min(streak, 10) * 20, o.x, o.y);
+    renderBossPrompt(boss.def, boss.blankIdx, { hp: boss.hp, status: 'right' });
+    if (boss.hp <= 0) { boss.dying = 1; Sfx.bossDie(); shake = 24; addScore(1000, boss.x, boss.y, '#b388ff'); for (let i = 0; i < 5; i++) setTimeout(() => explode(boss.x + rand(-80, 80), boss.y + rand(-30, 30), pick(['#ffd166', '#ff6b6b', '#b388ff', '#fff']), 30, 300), i * 150); }
+    finishWave();
+  } else {
+    wave.lastOk = false; wrong++; streak = 0; boss.angry = 1; shatter(o); Sfx.wrong();
+    missedItems.push({ item: { s: boss.def.text, a: b.a, tip: b.tip }, wrongWord: o.word, bossBlank: boss.blankIdx });
+    boss.options.forEach(x => { x.alive = false; });
+    renderBossPrompt(boss.def, boss.blankIdx, { hp: boss.hp, status: 'wrong', wrongWord: o.word, tip: b.tip || level.tip });
+    loseLife(o.x, o.y);
+    // same blank again after feedback: do not advance blankIdx
+    wave.resolved = true; wave.feedbackT = 0.01; wave.retry = true;
+    boss.blankIdx--; // compensated by the ++ in the resolved branch
+  }
+}
+
+// ---------- Lander ----------
+function updateLander(dt) {
+  if (ship.landed) return;
+  wave.timeLeft -= dt;
+  const g = wave.gravity; const thrust = 260 * (H / 700);
+  let steer = 0; if (keys.left) steer -= 1; if (keys.right) steer += 1;
+  let thrusting = keys.up || keys.fire;
+  if (pointer.down) { thrusting = true; const dx = pointer.x - ship.x; steer = clamp(dx / 80, -1, 1); }
+  if (ship.fuel <= 0) thrusting = false;
+  ship.angle = lerp(ship.angle, steer * 0.35, 1 - Math.pow(0.01, dt));
+  if (thrusting) {
+    ship.fuel = Math.max(0, ship.fuel - dt * 0.09);
+    ship.vy -= thrust * dt; ship.vx += steer * 160 * dt;
+    particles.push({ x: ship.x + Math.sin(ship.angle) * 14 + rand(-4, 4), y: ship.y + 16, vx: -Math.sin(ship.angle) * 60 + rand(-30, 30), vy: 160 + rand(0, 80), life: 0.3, t: 0, color: pick(['#ffd166', '#ff9f43', '#fff']), size: rand(2, 5) });
+  } else ship.vx += steer * 60 * dt;
+  if (thrusting !== ship.thrusting) { ship.thrusting = thrusting; Sfx.thrust(thrusting); }
+  ship.vy += g * dt; ship.vx *= Math.pow(0.5, dt); // drag
+  ship.x += ship.vx * dt; ship.y += ship.vy * dt;
+  if (ship.x < 20) { ship.x = 20; ship.vx = Math.abs(ship.vx) * 0.5; } if (ship.x > W - 20) { ship.x = W - 20; ship.vx = -Math.abs(ship.vx) * 0.5; }
+  if (ship.y < promptBottom() + 10) { ship.y = promptBottom() + 10; ship.vy = Math.max(ship.vy, 0); }
+  // pads
+  const item = wave.item; const bottom = ship.y + 16;
+  for (const p of wave.pads) {
+    if (Math.abs(ship.x - p.x) < p.w / 2 && bottom >= p.y && bottom < p.y + 24) {
+      ship.landed = true; Sfx.thrust(false); ship.y = p.y - 16;
+      const soft = ship.vy < 170 * (H / 700);
+      if (p.correct && soft) {
+        wave.lastOk = true; right++; streak++; bestStreak = Math.max(bestStreak, streak); recordItem(item, true); Sfx.land();
+        const bonus = 400 + Math.round(ship.fuel * 300) + Math.max(0, Math.round(wave.timeLeft * 10));
+        addScore(bonus, ship.x, ship.y - 30, '#5dffa6'); explode(ship.x, ship.y, '#5dffa6', 24, 160);
+        renderPrompt(item, { fill: item.a, status: 'right', kicker: 'Perfect landing' });
+      } else if (p.correct && !soft) {
+        wave.lastOk = true; recordItem(item, true); Sfx.crash(); shake = 10; explode(ship.x, ship.y, '#ff9f43', 30, 240);
+        renderPrompt(item, { fill: item.a, status: 'right', kicker: 'Right word, hard landing. No bonus.' });
+      } else {
+        wave.lastOk = false; wrong++; streak = 0; recordItem(item, false); missedItems.push({ item, wrongWord: p.word });
+        Sfx.wrong(); shake = 6; explode(ship.x, ship.y, '#ff6b6b', 16);
+        renderPrompt(item, { status: 'wrong', wrongWord: p.word, tip: item.tip || level.tip, kicker: 'Wrong pad. No heart lost, this one was a bonus.' });
+      }
+      finishWave(); return;
+    }
+  }
+  // ground between pads
+  if (ship.y + 16 >= H - 24) {
+    ship.landed = true; Sfx.thrust(false); Sfx.crash(); shake = 12; explode(ship.x, ship.y, '#ff9f43', 36, 260);
+    wave.lastOk = false; renderPrompt(item, { fill: item.a, status: 'right', kicker: 'Crashed in the rocks. The answer was:' });
+    finishWave(); return;
+  }
+  if (wave.timeLeft <= 0) {
+    ship.landed = true; Sfx.thrust(false); wave.lastOk = false;
+    renderPrompt(item, { fill: item.a, status: 'right', kicker: 'Out of time. The answer was:' }); finishWave();
+  }
+}
+
+// ============================================================
+// Draw
+// ============================================================
+function draw() {
+  ctx.save();
+  if (shake > 0) ctx.translate(rand(-shake, shake) * 0.5, rand(-shake, shake) * 0.5);
+  // background
+  const grd = ctx.createLinearGradient(0, 0, 0, H); grd.addColorStop(0, '#0b1026'); grd.addColorStop(1, lvlIndex % 2 ? '#151033' : '#0e1a3a');
+  ctx.fillStyle = grd; ctx.fillRect(-20, -20, W + 40, H + 40);
+  const now = performance.now() / 1000;
+  for (const s of stars) { const a = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(now * 2 + s.tw)) * s.z; ctx.fillStyle = `rgba(255,255,255,${a.toFixed(2)})`; const r = 0.6 + s.z * 1.6; ctx.fillRect(s.x, s.y, r, r); }
+  if (state === 'playing' && wave) {
+    if (wave.type === 'lander') drawLander(); else {
+      drawPowerups();
+      if (wave.type === 'boss') drawBoss(); else drawTargets();
+      drawBullets(); drawShip();
+    }
+  }
+  drawDebris(); drawParticles(); drawFloaters();
+  if (state === 'playing') drawHUD();
+  ctx.restore();
+  if (flash > 0) { ctx.fillStyle = `rgba(${flashColor},${flash * 0.5})`; ctx.fillRect(0, 0, W, H); }
+}
+
+function drawRock(t) {
+  ctx.save(); ctx.translate(t.x, t.y);
+  const sp = t.spawn === undefined ? 1 : t.spawn; const sc = 1 - Math.pow(1 - sp, 3);
+  ctx.scale(sc, sc);
+  ctx.rotate(t.rot);
+  const n = t.pts.length;
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; const rr = t.r * t.pts[i]; const px = Math.cos(a) * rr, py = Math.sin(a) * rr; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+  ctx.closePath();
+  const g = ctx.createRadialGradient(-t.r * 0.3, -t.r * 0.3, t.r * 0.1, 0, 0, t.r);
+  g.addColorStop(0, `hsl(${t.hue},40%,${t.kind === 'invader' ? 48 : 40}%)`); g.addColorStop(1, `hsl(${t.hue},45%,18%)`);
+  ctx.fillStyle = g; ctx.fill();
+  ctx.lineWidth = 2.5; ctx.strokeStyle = t.flash > 0 ? '#fff' : `hsl(${t.hue},60%,65%)`; ctx.stroke();
+  // craters
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.beginPath(); ctx.arc(t.r * 0.35, t.r * 0.25, t.r * 0.16, 0, 6.28); ctx.fill();
+  ctx.beginPath(); ctx.arc(-t.r * 0.4, t.r * 0.35, t.r * 0.1, 0, 6.28); ctx.fill();
+  ctx.restore();
+  // word label (unrotated)
+  if (sp > 0.6) drawWord(t.x, t.y, t.word, t.r);
+}
+function drawWord(x, y, word, r) {
+  const label0 = dispWord(word);
+  let size = clamp(r * 0.62 - Math.max(0, label0.length - 4) * 2.2, 12, 30);
+  ctx.font = `800 ${size}px "Avenir Next", "Nunito", "Segoe UI", system-ui, sans-serif`;
+  while (size > 10 && ctx.measureText(label0).width > r * 1.8) { size -= 1; ctx.font = `800 ${size}px "Avenir Next", "Nunito", "Segoe UI", system-ui, sans-serif`; }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineJoin = 'round';
+  const label = dispWord(word);
+  ctx.strokeText(label, x, y + 1); ctx.fillStyle = '#fff'; ctx.fillText(label, x, y + 1);
+}
+function drawTargets() { for (const t of targets) if (t.alive) drawRock(t); }
+function drawBullets() {
+  for (const b of bullets) {
+    ctx.fillStyle = '#fff'; ctx.shadowColor = '#4cc9f0'; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(b.x - 3, b.y - 14, 6, 22, 3) : ctx.rect(b.x - 3, b.y - 14, 6, 22); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  for (const b of enemyBullets) {
+    ctx.fillStyle = '#ff6b6b'; ctx.shadowColor = '#ff6b6b'; ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 6.28); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(b.x, b.y, 3, 0, 6.28); ctx.fill();
+  }
+}
+function drawShip(angle) {
+  const s = ship; ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(angle !== undefined ? angle : s.tilt * 0.35);
+  // engine glow
+  const thrustOn = wave && wave.type === 'lander' ? s.thrusting : true;
+  if (thrustOn && s.alive) {
+    const fl = 10 + Math.random() * 10;
+    ctx.fillStyle = 'rgba(255,170,60,0.85)'; ctx.beginPath(); ctx.moveTo(-7, 14); ctx.lineTo(7, 14); ctx.lineTo(0, 14 + fl); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.moveTo(-3, 14); ctx.lineTo(3, 14); ctx.lineTo(0, 14 + fl * 0.5); ctx.closePath(); ctx.fill();
+  }
+  // body
+  ctx.fillStyle = '#4cc9f0'; ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(16, 10); ctx.lineTo(8, 14); ctx.lineTo(-8, 14); ctx.lineTo(-16, 10); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#1b6f8f'; ctx.beginPath(); ctx.moveTo(16, 10); ctx.lineTo(26, 16); ctx.lineTo(10, 14); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-16, 10); ctx.lineTo(-26, 16); ctx.lineTo(-10, 14); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(0, -6, 5, 7, 0, 0, 6.28); ctx.fill();
+  ctx.fillStyle = '#0b1026'; ctx.beginPath(); ctx.ellipse(0, -6, 3, 4.5, 0, 0, 6.28); ctx.fill();
+  if (shield) { ctx.strokeStyle = 'rgba(76,201,240,0.9)'; ctx.lineWidth = 3; ctx.shadowColor = '#4cc9f0'; ctx.shadowBlur = 16; ctx.beginPath(); ctx.arc(0, -2, 34 + Math.sin(performance.now() / 150) * 2, 0, 6.28); ctx.stroke(); ctx.shadowBlur = 0; }
+  ctx.restore();
+}
+function drawPowerups() {
+  for (const p of powerups) {
+    const c = POWER[p.type]; const yy = p.y + Math.sin(p.bob) * 3;
+    ctx.save(); ctx.translate(p.x, yy);
+    ctx.shadowColor = c.color; ctx.shadowBlur = 18;
+    ctx.fillStyle = c.color; ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 6.28); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, p.r + 4 + Math.sin(p.rot * 2) * 2, 0, 6.28); ctx.stroke();
+    ctx.fillStyle = '#07102a'; ctx.font = `900 ${p.type === 'x2' ? 16 : 18}px system-ui, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(c.glyph, 0, 1);
+    ctx.restore();
+  }
+}
+function drawBoss() {
+  const b = boss; ctx.save(); ctx.translate(b.x, b.y);
+  const angry = b.angry; const hue = 265;
+  ctx.shadowColor = angry ? '#ff6b6b' : '#b388ff'; ctx.shadowBlur = 30;
+  // saucer body
+  ctx.fillStyle = angry ? '#8b2d4a' : `hsl(${hue},45%,35%)`;
+  ctx.beginPath(); ctx.ellipse(0, 0, b.w / 2, b.h / 2.4, 0, 0, 6.28); ctx.fill(); ctx.shadowBlur = 0;
+  ctx.fillStyle = `hsl(${hue},50%,22%)`; ctx.beginPath(); ctx.ellipse(0, 8, b.w / 2.2, b.h / 4, 0, 0, 6.28); ctx.fill();
+  // dome
+  ctx.fillStyle = 'rgba(179,136,255,0.75)'; ctx.beginPath(); ctx.ellipse(0, -18, b.w / 4.5, b.h / 3, 0, 0, 6.28); ctx.fill();
+  // eye
+  const ex = clamp((ship.x - b.x) / 40, -8, 8);
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(0, -18, 16, 12, 0, 0, 6.28); ctx.fill();
+  ctx.fillStyle = angry ? '#ff2d55' : '#0b1026'; ctx.beginPath(); ctx.arc(ex, -17, 7, 0, 6.28); ctx.fill();
+  // lights
+  for (let i = -3; i <= 3; i++) { const on = Math.floor(b.t * 6 + i) % 3 === 0; ctx.fillStyle = on ? '#ffd166' : 'rgba(255,209,102,0.3)'; ctx.beginPath(); ctx.arc(i * (b.w / 8), 10, 4, 0, 6.28); ctx.fill(); }
+  // hp bar
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(-b.w / 2, -b.h / 2 - 22, b.w, 10);
+  ctx.fillStyle = '#ff6b6b'; ctx.fillRect(-b.w / 2, -b.h / 2 - 22, b.w * (b.hp / b.maxHp), 10);
+  ctx.restore();
+  // orbiting word options: draw as glowing orbs
+  for (const o of b.options) {
+    if (!o.alive) continue;
+    ctx.save(); ctx.translate(o.x, o.y);
+    ctx.shadowColor = '#b388ff'; ctx.shadowBlur = 16;
+    const g = ctx.createRadialGradient(-o.r * 0.3, -o.r * 0.3, 2, 0, 0, o.r); g.addColorStop(0, '#6a4fc4'); g.addColorStop(1, '#2a1b5e');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, o.r, 0, 6.28); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
+    drawWord(o.x, o.y, o.word, o.r);
+  }
+}
+function drawLander() {
+  // ground
+  ctx.fillStyle = '#1b1f3a'; ctx.fillRect(0, H - 24, W, 24);
+  ctx.fillStyle = '#262b4f';
+  for (let x = 0; x < W; x += 28) { ctx.beginPath(); ctx.moveTo(x, H - 24); ctx.lineTo(x + 14, H - 24 - 10 - (x * 7 % 9)); ctx.lineTo(x + 28, H - 24); ctx.fill(); }
+  for (const p of wave.pads) {
+    // pillar
+    ctx.fillStyle = '#2a3160'; ctx.fillRect(p.x - p.w * 0.3, p.y, p.w * 0.6, H - p.y);
+    // pad
+    ctx.fillStyle = p.correct && wave.resolved && wave.lastOk ? '#5dffa6' : '#3f4b8c'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(p.x - p.w / 2, p.y - 6, p.w, 14, 6) : ctx.rect(p.x - p.w / 2, p.y - 6, p.w, 14); ctx.fill();
+    // blinking edge lights
+    const on = Math.floor(performance.now() / 300) % 2 === 0;
+    ctx.fillStyle = on ? '#ffd166' : '#8a6d2b'; ctx.fillRect(p.x - p.w / 2, p.y - 8, 6, 4); ctx.fillRect(p.x + p.w / 2 - 6, p.y - 8, 6, 4);
+    // word sign
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; const sw = Math.max(70, p.word.length * 16 + 24); ctx.beginPath(); ctx.roundRect ? ctx.roundRect(p.x - sw / 2, p.y + 16, sw, 34, 8) : ctx.rect(p.x - sw / 2, p.y + 16, sw, 34); ctx.fill();
+    drawWord(p.x, p.y + 33, p.word, 40);
+  }
+  // fuel + timer
+  const barW = Math.min(220, W * 0.4); const bx = W / 2 - barW / 2, by = promptBottom() + 22;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx, by, barW, 10);
+  ctx.fillStyle = ship.fuel > 0.3 ? '#ffd166' : '#ff6b6b'; ctx.fillRect(bx, by, barW * ship.fuel, 10);
+  ctx.fillStyle = '#9aa5d1'; ctx.font = '700 12px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(`FUEL · ${Math.max(0, Math.ceil(wave.timeLeft))}s`, W / 2, by - 6);
+  // speed warning
+  if (ship.vy > 150 * (H / 700) && !ship.landed) { ctx.fillStyle = '#ff6b6b'; ctx.font = '800 13px system-ui, sans-serif'; ctx.fillText('TOO FAST', ship.x, ship.y + 40); }
+  drawShip(ship.angle);
+}
+function drawDebris() { ctx.fillStyle = '#3b3f5c'; for (const d of debris) { ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.rot); ctx.globalAlpha = 1 - d.t / d.life; ctx.fillRect(-d.r, -d.r, d.r * 2, d.r * 2); ctx.restore(); } ctx.globalAlpha = 1; }
+function drawParticles() { for (const p of particles) { ctx.globalAlpha = 1 - p.t / p.life; ctx.fillStyle = p.color; ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size); } ctx.globalAlpha = 1; }
+function drawFloaters() {
+  for (const f of floaters) {
+    ctx.globalAlpha = 1 - Math.max(0, f.t - 0.6) * 2.5; ctx.font = '900 20px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.strokeText(f.text, f.x, f.y); ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawHUD() {
+  const top = (window.visualViewport ? 0 : 0) + 12;
+  ctx.textBaseline = 'middle';
+  // lives
+  ctx.font = '20px system-ui, sans-serif'; ctx.textAlign = 'left';
+  let hearts = ''; for (let i = 0; i < LIVES_MAX; i++) hearts += i < lives ? '❤️' : '🖤';
+  ctx.fillText(hearts, 14, top + 12);
+  // score
+  ctx.font = '900 22px "Avenir Next", system-ui, sans-serif'; ctx.textAlign = 'right';
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.strokeText(String(score), W - 58, top + 12); ctx.fillStyle = '#ffd166'; ctx.fillText(String(score), W - 58, top + 12);
+  // level + wave progress
+  ctx.textAlign = 'center'; ctx.font = '800 12px system-ui, sans-serif'; ctx.fillStyle = '#9aa5d1';
+  ctx.fillText(`LEVEL ${lvlIndex + 1} · ${level.name.toUpperCase()}`, W / 2, top + 4);
+  const n = waves.length, dotW = Math.min(12, (W * 0.5) / n);
+  for (let i = 0; i < n; i++) {
+    const x = W / 2 - (n * dotW) / 2 + i * dotW + dotW / 2; const t = waves[i].type;
+    ctx.fillStyle = i < waveIdx ? '#5dffa6' : i === waveIdx ? '#fff' : 'rgba(255,255,255,0.25)';
+    if (t === 'boss') { ctx.font = '12px system-ui'; ctx.fillText('👾', x, top + 22); }
+    else if (t === 'lander') { ctx.font = '11px system-ui'; ctx.fillText('🛬', x, top + 22); }
+    else if (t === 'rush') { ctx.font = '11px system-ui'; ctx.fillText('⚡', x, top + 22); }
+    else { ctx.beginPath(); ctx.arc(x, top + 22, 3, 0, 6.28); ctx.fill(); }
+  }
+  // status chips above the ship
+  const chips = [];
+  const inLander = wave && wave.type === 'lander';
+  if (!inLander && multiplier > 1) chips.push({ t: `×2 (${multiShots})`, c: '#ff9f43' });
+  if (slowT > 0) chips.push({ t: `slow ${slowT.toFixed(0)}s`, c: '#b388ff' });
+  if (!inLander && streak >= 3) chips.push({ t: `🔥 ${streak}`, c: '#5dffa6' });
+  if (wave && wave.type === 'rush') chips.push({ t: `⏱ ${Math.max(0, wave.timeLeft).toFixed(0)}`, c: wave.timeLeft < 6 ? '#ff6b6b' : '#fff' });
+  ctx.font = '800 13px system-ui, sans-serif'; ctx.textAlign = 'center';
+  chips.forEach((c, i) => { const y = H - 54 - (isTouch ? 30 : 0); const x = W / 2 + (i - (chips.length - 1) / 2) * 90; ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 40, y - 10, 80, 20, 10) : ctx.rect(x - 40, y - 10, 80, 20); ctx.fill(); ctx.fillStyle = c.c; ctx.fillText(c.t, x, y + 1); });
+}
+
+// ============================================================
+// Flow: levels, waves, end screens
+// ============================================================
+function startLevel(i) {
+  lvlIndex = i; level = LEVELS[i]; waves = planLevel(level); waveIdx = -1; wave = null;
+  score = 0; lives = LIVES_MAX; streak = 0; bestStreak = 0; right = 0; wrong = 0; missedItems = [];
+  multiplier = 1; multiShots = 0; slowT = 0; shield = false; bullets = []; targets = []; powerups = []; particles = []; floaters = []; enemyBullets = []; debris = [];
+  ship.x = W / 2; ship.y = H - 70 - (isTouch ? 30 : 0);
+  hideScreens(); state = 'playing'; $('pauseBtn').classList.add('show');
+  showBanner(`LEVEL ${i + 1}`, level.name + (level.subtitle ? ' · ' + level.subtitle : '')); Sfx.fanfare();
+  setTimeout(() => { if (state === 'playing' && waveIdx === -1) nextWave(); }, 1400);
+}
+function nextWave() {
+  waveIdx++;
+  if (waveIdx >= waves.length) { levelComplete(); return; }
+  startWave(waves[waveIdx]);
+}
+function levelComplete() {
+  state = 'end'; hidePrompt(); setHint(''); $('pauseBtn').classList.remove('show'); Sfx.fanfare();
+  runCleared++;
+  save.cleared[level.id] = true; save.best[level.id] = Math.max(save.best[level.id] || 0, score);
+  if (lvlIndex + 1 < LEVELS.length) save.unlocked = Math.max(save.unlocked, lvlIndex + 2);
+  PBLeaderboard.saveProgress(save);
+  showEnd(true);
+}
+function gameOver() {
+  state = 'end'; hidePrompt(); setHint(''); $('pauseBtn').classList.remove('show'); Sfx.thrust(false);
+  save.best[level.id] = Math.max(save.best[level.id] || 0, score); PBLeaderboard.saveProgress(save);
+  showEnd(false);
+}
+function showEnd(won) {
+  const total = right + wrong; const acc = total ? Math.round((right / total) * 100) : 0;
+  $('endTitle').textContent = won ? `Level ${lvlIndex + 1} cleared!` : 'Ship down';
+  $('endSub').textContent = won ? (lvlIndex + 1 < LEVELS.length ? `${level.name} done. Next: ${LEVELS[lvlIndex + 1].name}.` : 'You cleared every level. Legend.') : `${level.name}. The words that got you are below.`;
+  $('stScore').textContent = score; $('stAcc').textContent = acc + '%'; $('stStreak').textContent = bestStreak;
+  const rv = $('review'); rv.innerHTML = '';
+  if (missedItems.length) {
+    rv.innerHTML = '<h3>Worth another look</h3>' + missedItems.map(m => {
+      const filled = esc(m.item.s).replace(/___/g, () => `<b>${esc(dispWord(m.item.a))}</b>`);
+      const sentence = m.bossBlank !== undefined ? fillBoss(m) : filled;
+      return `<div class="it">${sentence}<small>you shot <s>${esc(dispWord(m.wrongWord))}</s>${m.item.tip ? ' · ' + esc(m.item.tip) : ''}</small></div>`;
+    }).join('');
+  } else rv.innerHTML = `<div class="it">Clean run. Nothing to review. 🎯</div>`;
+  $('nextBtn').style.display = won && lvlIndex + 1 < LEVELS.length ? '' : 'none';
+  $('replayBtn').textContent = won ? 'Replay' : 'Try again';
+  // leaderboard entry for the sitting
+  PBLeaderboard.submit({ name: save.name || 'Pilot', score, level: level.name, levelsCleared: won ? 1 : 0, accuracy: acc });
+  showScreen('endScreen');
+}
+function fillBoss(m) {
+  // show only the sentence around the missed blank
+  const parts = m.item.s.split('___'); const i = m.bossBlank;
+  const before = parts[i].split(/(?<=[.!?])\s+/).pop(); const after = (parts[i + 1] || '').split(/(?<=[.!?])\s+/)[0];
+  return `...${esc(before)}<b>${esc(dispWord(m.item.a))}</b>${esc(after)}...`;
+}
+
+// ============================================================
+// Screens
+// ============================================================
+function hideScreens() { document.querySelectorAll('.screen').forEach(s => s.classList.remove('show')); }
+function showScreen(id) { hideScreens(); $(id).classList.add('show'); }
+function renderTitle() {
+  $('nameInput').value = save.name || '';
+  const grid = $('levelGrid'); grid.innerHTML = '';
+  LEVELS.forEach((l, i) => {
+    const locked = i + 1 > save.unlocked; const el = document.createElement('div');
+    el.className = 'lvl' + (locked ? ' locked' : '') + (save.cleared[l.id] ? ' cleared' : '');
+    el.innerHTML = `<div class="n">Level ${i + 1}</div><div class="t">${esc(l.name)}</div><div class="d">${esc(l.subtitle || '')}</div>` + (save.best[l.id] ? `<div class="best">best ${save.best[l.id]}</div>` : '');
+    if (!locked) el.addEventListener('click', () => { commitName(); Sfx.unlock(); startLevel(i); });
+    grid.appendChild(el);
+  });
+  const seen = Object.keys(save.items).length;
+  const where = PBLeaderboard.user ? 'Progress saved to your Google account' : 'Progress saved on this device';
+  $('saveNote').textContent = seen ? `${where} · ${seen} sentences met · ${Object.keys(save.cleared).length}/${LEVELS.length} levels cleared` : `${where}. Pick any unlocked level.`;
+  renderAccount();
+}
+function commitName() { let n = $('nameInput').value.trim().slice(0, 16); if (!n && PBLeaderboard.user && PBLeaderboard.user.name) n = PBLeaderboard.user.name.split(' ')[0].slice(0, 16); save.name = n; PBLeaderboard.saveProgress(save); }
+async function renderScores() {
+  const b = $('board'); b.innerHTML = '<div class="r"><span>Loading...</span></div>';
+  const { rows, source } = await PBLeaderboard.top(25);
+  $('boardNote').textContent = source === 'cloud' ? 'Everyone who has signed in, best 25 runs.' : (PBLeaderboard.user ? 'Could not reach the leaderboard. Showing this device.' : 'Scores on this device. Sign in with Google to see everyone.');
+  const me = PBLeaderboard.user ? PBLeaderboard.user.uid : null;
+  b.innerHTML = rows.length ? rows.map((r, i) => `<div class="r"><span>${i + 1}. <span class="${(me && r.uid === me) || (!me && r.name === save.name) ? 'me' : ''}">${esc(r.name)}</span> <small>${esc(r.level)}${r.accuracy ? ' · ' + r.accuracy + '%' : ''}</small></span><b>${r.score}</b></div>`).join('') : '<div class="r"><span>No scores yet. Go blast something.</span></div>';
+  renderAccount();
+}
+function renderAccount() {
+  const u = PBLeaderboard.user;
+  const html = u
+    ? `${u.photo ? `<img src="${esc(u.photo)}" alt="" referrerpolicy="no-referrer">` : ''}<span>Signed in as <b>${esc(u.name || u.email)}</b></span><button class="ghost" data-act="out">Sign out</button>`
+    : `<button class="ghost" data-act="in">Sign in with Google to post scores</button>`;
+  ['account', 'boardAccount'].forEach(id => { const el = $(id); if (!el) return; el.innerHTML = html; const btn = el.querySelector('button'); if (btn) btn.addEventListener('click', onAccountClick); });
+}
+async function onAccountClick(e) {
+  const act = e.currentTarget.dataset.act; e.currentTarget.disabled = true;
+  try { if (act === 'in') await PBLeaderboard.signIn(); else await PBLeaderboard.signOut(); }
+  catch (err) { console.warn(err); e.currentTarget.disabled = false; e.currentTarget.textContent = 'Sign-in failed. Try again.'; return; }
+  renderAccount(); if (state === 'title') renderTitle();
+}
+
+// ============================================================
+// Input
+// ============================================================
+window.addEventListener('keydown', (e) => {
+  if (e.target && e.target.tagName === 'INPUT') { if (e.key === 'Enter') { commitName(); $('playBtn').click(); } return; }
+  const k = e.key;
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = true;
+  if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = true;
+  if (k === 'ArrowUp' || k === 'w' || k === 'W') { keys.up = true; if (!e.repeat) keys.firePressed = true; }
+  if (k === ' ' || k === 'Spacebar') { keys.fire = true; if (!e.repeat) keys.firePressed = true; e.preventDefault(); }
+  if (k === 'p' || k === 'P' || k === 'Escape') togglePause();
+  if (k === 'm' || k === 'M') toggleMute();
+  if (k === 'Enter' && state === 'end') { ($('nextBtn').style.display !== 'none' ? $('nextBtn') : $('replayBtn')).click(); }
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(k)) e.preventDefault();
+});
+window.addEventListener('keyup', (e) => {
+  const k = e.key;
+  if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = false;
+  if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false;
+  if (k === 'ArrowUp' || k === 'w' || k === 'W') keys.up = false;
+  if (k === ' ' || k === 'Spacebar') keys.fire = false;
+});
+canvas.addEventListener('pointerdown', (e) => {
+  Sfx.unlock(); if (state !== 'playing' || !wave || wave.resolved) return;
+  pointer.down = true; pointer.x = e.clientX; pointer.y = e.clientY; pointer.id = e.pointerId;
+  if (wave.type === 'lander') return;
+  // tap a target or powerup: slide under it and fire
+  const list = (wave.type === 'boss' ? boss.options : targets).filter(t => t.alive).concat(powerups.filter(p => p.alive));
+  let best = null, bd = Infinity;
+  for (const t of list) { const d = dist2(e.clientX, e.clientY, t.x, t.y); const hitR = (t.r + 26) ** 2; if (d < hitR && d < bd) { bd = d; best = t; } }
+  if (best) { ship.targetX = clamp(best.x + (best.vx || 0) * 0.25, 30, W - 30); ship.autoFire = true; }
+  else if (Math.abs(e.clientX - ship.x) < 40 && Math.abs(e.clientY - ship.y) < 60) { fire(); }
+  else { ship.targetX = clamp(e.clientX, 30, W - 30); ship.autoFire = true; }
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (!pointer.down || e.pointerId !== pointer.id) return;
+  pointer.x = e.clientX; pointer.y = e.clientY;
+  if (wave && wave.type !== 'lander' && !ship.autoFire) ship.targetX = clamp(e.clientX, 30, W - 30);
+  if (wave && wave.type !== 'lander' && ship.autoFire && Math.abs(e.clientX - (ship.targetX || 0)) > 50) { ship.targetX = clamp(e.clientX, 30, W - 30); ship.autoFire = false; }
+});
+const endPointer = (e) => { if (e.pointerId === pointer.id) pointer.down = false; };
+canvas.addEventListener('pointerup', endPointer); canvas.addEventListener('pointercancel', endPointer); canvas.addEventListener('pointerleave', endPointer);
+
+function togglePause() {
+  if (state === 'playing') { state = 'paused'; Sfx.thrust(false); showScreen('pauseScreen'); }
+  else if (state === 'paused') { hideScreens(); state = 'playing'; lastT = performance.now(); }
+}
+function toggleMute() { const m = Sfx.toggleMute(); $('muteBtn').textContent = m ? '🔇' : '🔊'; }
+
+$('playBtn').addEventListener('click', () => { Sfx.unlock(); commitName(); startLevel(Math.min(save.unlocked, LEVELS.length) - 1 >= 0 ? Math.max(0, Math.min(save.unlocked, LEVELS.length) - 1) : 0); });
+$('howBtn').addEventListener('click', () => showScreen('howScreen'));
+$('howBack').addEventListener('click', () => { renderTitle(); showScreen('titleScreen'); });
+$('scoresBtn').addEventListener('click', async () => { await renderScores(); showScreen('scoresScreen'); });
+$('scoresBack').addEventListener('click', () => { renderTitle(); showScreen('titleScreen'); });
+$('pauseBtn').addEventListener('click', togglePause);
+$('muteBtn').addEventListener('click', toggleMute);
+$('resumeBtn').addEventListener('click', togglePause);
+$('quitBtn').addEventListener('click', () => { state = 'title'; hidePrompt(); setHint(''); $('pauseBtn').classList.remove('show'); renderTitle(); showScreen('titleScreen'); });
+$('nextBtn').addEventListener('click', () => startLevel(lvlIndex + 1));
+$('replayBtn').addEventListener('click', () => startLevel(lvlIndex));
+$('menuBtn').addEventListener('click', () => { state = 'title'; renderTitle(); showScreen('titleScreen'); });
+Sfx.unlock = Sfx.unlock.bind(Sfx);
+
+// ============================================================
+// Main loop
+// ============================================================
+function frame(t) {
+  const dt = Math.min(0.05, (t - lastT) / 1000 || 0); lastT = t;
+  if (state === 'playing') update(dt);
+  else { for (const s of stars) { s.y += (8 + s.z * 40) * dt * 0.4; if (s.y > H) { s.y = -2; s.x = Math.random() * W; } } particles.forEach(p => { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; }); particles = particles.filter(p => p.t < p.life); }
+  draw();
+  requestAnimationFrame(frame);
+}
+resize(); renderTitle(); requestAnimationFrame(frame);
+
+// Read-only QA hook (browser-automation skill): with ?qa=1 in the URL the game
+// mirrors its state into a body data attribute ten times a second. Nothing in
+// the game reads it.
+if (location.search.includes('qa=1')) {
+  setInterval(() => {
+    const list = wave ? (wave.type === 'boss' && boss ? boss.options : wave.type === 'lander' ? wave.pads : targets) : [];
+    const correct = list.find(t => t.correct && (t.alive !== false));
+    document.body.dataset.pb = JSON.stringify({ state, level: level && level.id, waveIdx, waveType: wave && wave.type, resolved: wave ? !!wave.resolved : null,
+      shipX: ship.x, shipY: ship.y, shipVY: ship.vy, correctX: correct ? correct.x : null, correctY: correct ? correct.y : null,
+      lives, score, right, wrong, targets: list.filter(t => t.alive !== false).map(t => t.word) });
+  }, 100);
+}
+})();
+</script>
+</body>
+</html>
