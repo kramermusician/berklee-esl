@@ -1,0 +1,186 @@
+{
+  "title": "The History of the Blues",
+  "subtitle": "From field songs to the 12-bar form you play today",
+  "events": [
+    {
+      "title": "First Book of Slave Songs",
+      "date": "1867",
+      "precision": "year",
+      "caption": "A book called Slave Songs of the United States printed 136 songs sung by enslaved Black people. These work songs and spirituals kept West African habits like call and response, which the blues later used.",
+      "why12bar": "Call and response is still inside every 12-bar verse: the singer calls, and the guitar or piano answers.",
+      "image": "blues-images/01-slave-songs.jpg",
+      "credit": {
+        "title": "Slave Songs of the United States (1867) title page.jpg",
+        "author": "William Francis Allen, Charles Pickard Ware, Lucy McKim Garrison (editors)",
+        "source": "https://commons.wikimedia.org/wiki/File:Slave_Songs_of_the_United_States_(1867)_title_page.jpg",
+        "license": "Public domain"
+      },
+      "sources": [
+        "https://en.wikipedia.org/wiki/Slave_Songs_of_the_United_States",
+        "https://docsouth.unc.edu/church/allen/menu.html"
+      ]
+    },
+    {
+      "title": "Handy Publishes The Memphis Blues",
+      "date": "1912-09-27",
+      "precision": "day",
+      "caption": "W.C. Handy, a bandleader in Memphis, published The Memphis Blues as sheet music. It was one of the first blues songs ever printed, and it made the word blues famous.",
+      "why12bar": "Printed sheet music helped fix the blues as a written form with a set number of bars and chords.",
+      "image": "blues-images/02-wc-handy.jpg",
+      "credit": {
+        "title": "W. C. Handy (1941 Van Vechten portrait).jpg",
+        "author": "Carl Van Vechten",
+        "source": "https://commons.wikimedia.org/wiki/File:W._C._Handy_(1941_Van_Vechten_portrait).jpg",
+        "license": "Public domain"
+      },
+      "sources": [
+        "https://mississippitoday.org/2023/09/27/1912-w-c-handy-memphis-blues/",
+        "https://en.wikipedia.org/wiki/The_Memphis_Blues"
+      ]
+    },
+    {
+      "title": "Mamie Smith Records Crazy Blues",
+      "date": "1920-08-10",
+      "precision": "day",
+      "caption": "Mamie Smith recorded Crazy Blues in New York for OKeh Records. It was the first big blues record by a Black singer, and it sold so well that record companies started to look for more blues artists.",
+      "why12bar": "Records let people all over the country hear the blues sound, not just read it.",
+      "image": "blues-images/03-mamie-smith.jpg",
+      "credit": {
+        "title": "MamieSmith.png",
+        "author": "Unknown photographer",
+        "source": "https://commons.wikimedia.org/wiki/File:MamieSmith.png",
+        "license": "Public domain"
+      },
+      "sources": [
+        "https://www.npr.org/2006/11/11/6473116/mamie-smith-and-the-birth-of-the-blues-market",
+        "https://mainspringpress.org/category/okeh-race-records/"
+      ]
+    },
+    {
+      "title": "Bessie Smith Records Downhearted Blues",
+      "date": "1923-02-16",
+      "precision": "day",
+      "caption": "Bessie Smith made her first record, Downhearted Blues, with Clarence Williams on piano. She and Ma Rainey were the great blues queens of the 1920s, and Bessie was called the Empress of the Blues.",
+      "why12bar": "Classic blues singers made the 12-bar form with its AAB lyric pattern popular across America.",
+      "image": "blues-images/04-bessie-smith.jpg",
+      "credit": {
+        "title": "Bessie Smith (1936) by Carl Van Vechten.jpg",
+        "author": "Carl Van Vechten, restored by Adam Cuerden",
+        "source": "https://commons.wikimedia.org/wiki/File:Bessie_Smith_(1936)_by_Carl_Van_Vechten.jpg",
+        "license": "Public domain"
+      },
+      "sources": [
+        "https://www.nps.gov/locations/lowermsdeltaregion/bessie-smith.htm",
+        "https://www.britannica.com/biography/Bessie-Smith"
+      ]
+    },
+    {
+      "title": "Robert Johnson's First Recording Session",
+      "date": "1936-11-23",
+      "precision": "day",
+      "caption": "Robert Johnson, a Delta blues guitarist from Mississippi, recorded in a hotel room in San Antonio, Texas. He recorded only 29 songs in his life, but players from Muddy Waters to Eric Clapton learned from them.",
+      "why12bar": "His guitar played the bass line, the chords, and the turnaround at once, a pattern you can still use to comp a 12-bar blues.",
+      "image": "blues-images/05-robert-johnson.jpg",
+      "credit": {
+        "title": "Robert Johnson self-portrait original photograph (cropped).jpg",
+        "author": "Robert Johnson (self-portrait)",
+        "source": "https://commons.wikimedia.org/wiki/File:Robert_Johnson_self-portrait_original_photograph_(cropped).jpg",
+        "license": "Public domain"
+      },
+      "sources": [
+        "https://en.wikipedia.org/wiki/Robert_Johnson_recordings",
+        "https://www.thecurrent.org/feature/2016/11/18/today-in-music-history-robert-johnsons-first-recording-session"
+      ]
+    },
+    {
+      "title": "Muddy Waters Plugs In",
+      "date": "1948-04",
+      "precision": "month",
+      "caption": "Muddy Waters moved from Mississippi to Chicago during the Great Migration and recorded I Can't Be Satisfied with an electric guitar. The first 3,000 copies sold out in one day, and his label later became Chess Records.",
+      "why12bar": "Chicago electric blues added a loud band and a strong beat to the old Delta 12-bar form.",
+      "image": "blues-images/06-muddy-waters.jpg",
+      "credit": {
+        "title": "Muddy Waters (cropped).jpg",
+        "author": "Jean-Luc Ourlin",
+        "source": "https://commons.wikimedia.org/wiki/File:Muddy_Waters_(cropped).jpg",
+        "license": "CC BY-SA 2.0"
+      },
+      "sources": [
+        "https://en.wikipedia.org/wiki/Aristocrat_Records",
+        "https://www.udiscovermusic.com/stories/best-chess-blues-records-top-10/"
+      ]
+    },
+    {
+      "title": "B.B. King's First Number One",
+      "date": "1952",
+      "precision": "year",
+      "caption": "B.B. King's song 3 O'Clock Blues went to number one on the national R&B chart. He learned from T-Bone Walker, the Texas guitarist who first made the electric guitar a lead instrument in the blues.",
+      "why12bar": "King showed how a single-note guitar solo can sing over the 12-bar chords.",
+      "image": "blues-images/07-bb-king.jpg",
+      "credit": {
+        "title": "B.B. King performs at the Fillmore East, 1971.jpg",
+        "author": "Eugene F. Tourangeau",
+        "source": "https://commons.wikimedia.org/wiki/File:B.B._King_performs_at_the_Fillmore_East,_1971.jpg",
+        "license": "Public domain"
+      },
+      "sources": [
+        "https://theconversation.com/how-bb-kings-days-in-radio-helped-shape-his-career-and-music-41921",
+        "https://www.arts.gov/honors/heritage/riley-bb-king"
+      ]
+    },
+    {
+      "title": "Chuck Berry Records Maybellene",
+      "date": "1955-05-21",
+      "precision": "day",
+      "caption": "Chuck Berry recorded Maybellene at Chess Records in Chicago after Muddy Waters sent him there. It went to number one on the R&B chart and helped start rock and roll.",
+      "why12bar": "Many early rock and roll songs are a 12-bar blues played faster with a new beat.",
+      "image": "blues-images/08-chuck-berry.jpg",
+      "credit": {
+        "title": "Chuck Berry 1957 (cropped).jpg",
+        "author": "Universal Attractions (management)",
+        "source": "https://commons.wikimedia.org/wiki/File:Chuck_Berry_1957_(cropped).jpg",
+        "license": "Public domain"
+      },
+      "sources": [
+        "https://rockhall.com/inductees/chuck-berry/",
+        "https://en.wikipedia.org/wiki/Maybellene"
+      ]
+    },
+    {
+      "title": "Rolling Stones Record at Chess",
+      "date": "1964-06",
+      "precision": "month",
+      "caption": "The Rolling Stones, a young band from England, flew to Chicago to record at Chess Records, the home of their blues heroes. British bands like the Stones then sold American blues back to American fans.",
+      "why12bar": "The British blues boom carried the 12-bar form into rock music around the world.",
+      "image": "blues-images/09-rolling-stones.jpg",
+      "credit": {
+        "title": "Rolling Stones op Schiphol, Bestanddeelnr 916-7421.jpg",
+        "author": "Hugo van Gelderen / Anefo",
+        "source": "https://commons.wikimedia.org/wiki/File:Rolling_Stones_op_Schiphol,_Bestanddeelnr_916-7421.jpg",
+        "license": "CC0"
+      },
+      "sources": [
+        "https://en.wikipedia.org/wiki/2120_South_Michigan_Avenue",
+        "https://www.udiscovermusic.com/stories/five-by-five-or-is-that-six"
+      ]
+    },
+    {
+      "title": "Kingfish Ingram Wins a Grammy",
+      "date": "2022-04-03",
+      "precision": "day",
+      "caption": "Christone Kingfish Ingram, a young guitarist from Clarksdale, Mississippi, won the Grammy for Best Contemporary Blues Album for 662. The blues is still alive, and new players keep changing it.",
+      "why12bar": "Today's blues players still jam on the same 12-bar form you have been playing in class.",
+      "image": "blues-images/10-kingfish-ingram.jpg",
+      "credit": {
+        "title": "Kingfish by Rory Doyle.jpg",
+        "author": "Rory Doyle",
+        "source": "https://commons.wikimedia.org/wiki/File:Kingfish_by_Rory_Doyle.jpg",
+        "license": "CC BY-SA 4.0"
+      },
+      "sources": [
+        "https://www.grammy.com/awards/categories/best-contemporary-blues-album/2022/",
+        "https://www.alligator.com/news/905/CHRISTONE-KINGFISH-INGRAMS-662-WINS-GRAMMY-AWARD-FOR-BEST-CONTEMPORARY-BLUES-ALBUM/"
+      ]
+    }
+  ]
+}

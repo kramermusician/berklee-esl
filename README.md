@@ -27,6 +27,7 @@ shared/
   song-study/               worksheets both sections use
 tools/
   cabinet/                  Stuff to Track, a localStorage filing cabinet
+  timeline-maker/           Timeline Maker, photos and dates on a shaped line
 ```
 
 ## Adding material

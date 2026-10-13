@@ -1,0 +1,1729 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeline Maker</title>
+<style>
+:root {
+  --bg: #f4efe6; --panel: #fffdf8; --ink: #2b2a27; --muted: #6f6a60; --line: #ddd4c4;
+  --accent: #c8553d; --accent-ink: #fff; --ocean: #2a6f97; --sage: #7d9a72; --field: #fff;
+  --shadow: 0 1px 3px rgba(60,40,20,.12);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c1d1f; --panel: #26272a; --ink: #ece7dd; --muted: #a39d92; --line: #3b3c40;
+    --accent: #e0775f; --accent-ink: #1c1d1f; --field: #1f2022; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1c1d1f; --panel: #26272a; --ink: #ece7dd; --muted: #a39d92; --line: #3b3c40;
+  --accent: #e0775f; --accent-ink: #1c1d1f; --field: #1f2022; --shadow: none;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.4 "Avenir Next", "Segoe UI", Helvetica, Arial, sans-serif; display: flex; flex-direction: column; }
+button, input, select, textarea { font: inherit; color: inherit; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+header h1 { font-size: 18px; margin: 0 12px 0 0; letter-spacing: .02em; }
+header .spacer { flex: 1; }
+.btn { border: 1px solid var(--line); background: var(--field); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.small { padding: 3px 8px; font-size: 13px; }
+.btn.danger.armed { background: #b3261e; color: #fff; border-color: #b3261e; }
+main { flex: 1; display: flex; min-height: 0; }
+aside { width: 360px; min-width: 300px; border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tabs button { flex: 1; border: 0; background: none; padding: 10px; cursor: pointer; border-bottom: 3px solid transparent; color: var(--muted); }
+.tabs button.on { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.pane { display: none; overflow: auto; padding: 14px 16px 40px; flex: 1; }
+.pane.on { display: block; }
+.field { margin: 0 0 12px; }
+.field > label, .group-label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; }
+input[type=text], input[type=number], select, textarea { width: 100%; border: 1px solid var(--line); background: var(--field); border-radius: 6px; padding: 6px 8px; }
+textarea { resize: vertical; min-height: 54px; }
+.row { display: flex; gap: 8px; align-items: center; }
+.row > * { flex: 1; }
+.check { display: flex; align-items: center; gap: 8px; margin: 6px 0; cursor: pointer; }
+.check input { width: auto; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--field); border-radius: 8px; padding: 6px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; min-width: 70px; }
+.chip svg { width: 52px; height: 30px; }
+.chip.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+#candyField { display: none; }
+body.candy-shape #candyField { display: block; }
+.pal { display: flex; gap: 2px; height: 16px; margin: 4px 0 2px; }
+.pal i { width: 9px; border-radius: 3px; }
+#candyInputs input[type=color] { width: 30px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.swatch { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.swatch.on { border-color: var(--ink); }
+input[type=color] { width: 30px; height: 26px; border: 0; padding: 0; background: none; cursor: pointer; }
+.drop { border: 2px dashed var(--line); border-radius: 10px; padding: 14px; text-align: center; color: var(--muted); margin-bottom: 12px; cursor: pointer; }
+.drop.over { border-color: var(--accent); color: var(--ink); }
+.ev { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; background: var(--field); }
+.ev.sel { border-color: var(--accent); }
+.ev-head { display: flex; gap: 8px; align-items: center; padding: 6px 8px; cursor: pointer; }
+.ev-head .thumb { width: 38px; height: 38px; border-radius: 6px; object-fit: cover; background: var(--line); flex: none; }
+.ev-head .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.ev-head .t { flex: 1; min-width: 0; }
+.ev-head .t b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.ev-head .t span { font-size: 12px; color: var(--muted); }
+.ev-body { padding: 4px 10px 10px; display: none; border-top: 1px solid var(--line); }
+.ev.sel .ev-body { display: block; }
+.ev-tools { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.hint { font-size: 12px; color: var(--muted); margin: 4px 0 10px; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
+#stageWrap { flex: 1; overflow: auto; position: relative; min-width: 0; }
+#stage { display: block; margin: 16px auto; box-shadow: 0 2px 14px rgba(0,0,0,.12); }
+#stage .card { cursor: grab; touch-action: none; }
+.zoombar { position: sticky; bottom: 0; left: 0; display: flex; gap: 8px; align-items: center; justify-content: center; padding: 8px; background: color-mix(in srgb, var(--bg) 85%, transparent); }
+.zoombar input { width: 160px; }
+#toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 10; }
+#toast.show { opacity: .95; }
+#exitPresent { display: none; position: fixed; top: 14px; right: 14px; z-index: 20; opacity: .35; transition: opacity .2s; }
+#exitPresent:hover, #exitPresent:focus { opacity: 1; }
+body.presenting #exitPresent { display: block; }
+#stage .zoomable { transform-box: fill-box; transform-origin: center; transition: transform .25s ease, opacity .25s ease; }
+#stage .card.focus .zoomable { transform: scale(1.55); }
+#stage.focusing .card:not(.focus) .zoomable { opacity: .35; }
+body.presenting #stage .card { cursor: zoom-in; }
+body.presenting #stage .card.focus { cursor: zoom-out; }
+.play-set { display: inline-flex; gap: 4px; align-items: center; }
+.play-set select { width: auto; }
+#playBar { display: none; position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 20; background: rgba(20,20,20,.78); color: #fff; border-radius: 12px; padding: 8px 12px; gap: 8px; align-items: center; opacity: .3; transition: opacity .2s; }
+#playBar:hover, body.playing.paused #playBar { opacity: 1; }
+body.presenting.playing #playBar { display: flex; }
+#playBar button { background: none; border: 0; color: #fff; font-size: 18px; cursor: pointer; padding: 2px 6px; }
+#playBar .track { width: 220px; height: 5px; background: rgba(255,255,255,.25); border-radius: 3px; overflow: hidden; }
+#playBar .fill { height: 100%; width: 0; background: #e0775f; }
+#playBar .count { font: 600 13px/1 "Avenir Next", Helvetica, sans-serif; min-width: 48px; text-align: center; }
+#stage.playing .card.pending .zoomable { opacity: 0; transform: scale(.6); }
+#stage.playing .pending.mk, #stage.playing .pending.ld { opacity: 0; }
+#stage .mk, #stage .ld, #stage .tile { transition: opacity .3s ease; }
+#stage.playing .tile.pending { opacity: .12; }
+#presentOrbit { display: none; position: fixed; top: 14px; right: 104px; z-index: 20; opacity: .35; transition: opacity .2s; }
+#presentOrbit:hover, #presentOrbit:focus { opacity: 1; }
+body.presenting #presentOrbit { display: block; }
+#stage.playing .arrowhead { opacity: 0; transition: opacity .4s; }
+#stage.playing.done .arrowhead { opacity: 1; }
+#orbit { position: fixed; inset: 0; z-index: 40; background: #000; }
+#orbit canvas { display: block; cursor: grab; }
+#orbit .orbit-head { position: absolute; top: 18px; left: 0; right: 0; text-align: center; pointer-events: none; }
+#orbit .orbit-head .t { font-size: clamp(24px, 3.4vw, 52px); font-weight: 700; line-height: 1.1; }
+#orbit .orbit-head .s { font-size: clamp(13px, 1.4vw, 20px); opacity: .75; margin-top: 4px; }
+#orbit .orbit-head .lg { display: flex; gap: 22px; justify-content: center; margin-top: 8px; font-weight: 600; }
+#orbit .orbit-head .lg i { display: inline-block; width: 22px; height: 8px; border-radius: 3px; margin-right: 8px; vertical-align: middle; }
+#orbit .orbit-bar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; background: rgba(20,20,20,.78); color: #fff; border-radius: 12px; padding: 8px 12px; opacity: .3; transition: opacity .2s; }
+#orbit .orbit-bar:hover, #orbit.paused .orbit-bar { opacity: 1; }
+#orbit .orbit-bar button { background: none; border: 0; color: #fff; font-size: 18px; cursor: pointer; padding: 2px 6px; }
+#orbit .track { width: 220px; height: 5px; background: rgba(255,255,255,.25); border-radius: 3px; overflow: hidden; }
+#orbit .fill { height: 100%; width: 0; background: #f2b134; }
+#orbit .count { font: 600 13px/1 "Avenir Next", Helvetica, sans-serif; min-width: 48px; text-align: center; }
+body.presenting header, body.presenting aside, body.presenting .zoombar { display: none; }
+body.presenting #stageWrap { background: #000; display: flex; align-items: center; justify-content: center; }
+body.presenting #stage { margin: 0; box-shadow: none; max-width: 100vw; max-height: 100vh; width: auto !important; height: auto !important; }
+.menu { position: relative; }
+.menu-list { position: absolute; top: 110%; left: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); min-width: 220px; z-index: 5; display: none; padding: 4px; }
+.menu-list.open { display: block; }
+.menu-list button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.menu-list button:hover { background: var(--bg); }
+@media (max-width: 760px) {
+  main { flex-direction: column; }
+  aside { width: 100%; min-width: 0; max-height: 50vh; border-right: 0; border-bottom: 1px solid var(--line); }
+  header h1 { width: 100%; }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Timeline Maker</h1>
+  <button class="btn" id="btnNew">New</button>
+  <div class="menu">
+    <button class="btn" id="btnStarters">Starters ▾</button>
+    <div class="menu-list" id="starterList"></div>
+  </div>
+  <button class="btn" id="btnOpen">Open</button>
+  <button class="btn" id="btnSave">Save file</button>
+  <span class="spacer"></span>
+  <span class="play-set" title="How long the whole timeline takes to play"><button class="btn" id="btnPlay">▶ Play</button>
+    <select id="playSeconds"><option value="15">15 sec</option><option value="30">30 sec</option><option value="45">45 sec</option><option value="60">1 min</option><option value="90">1.5 min</option><option value="120">2 min</option><option value="180">3 min</option><option value="300">5 min</option><option value="600">10 min</option></select></span>
+  <button class="btn" id="btnOrbit" title="Present the timeline as a 3D ring">🪐 Orbit</button>
+  <button class="btn" id="btnPresent">Present</button>
+  <button class="btn primary" id="btnPng">Export PNG</button>
+  <input type="file" id="fileOpen" accept=".json,application/json" hidden>
+  <input type="file" id="filePhotos" accept="image/*" multiple hidden>
+  <input type="file" id="fileOnePhoto" accept="image/*" hidden>
+</header>
+<main>
+  <aside>
+    <div class="tabs">
+      <button data-tab="events" class="on">Events</button>
+      <button data-tab="lines">Timelines</button>
+      <button data-tab="style">Style</button>
+      <button data-tab="text">Text</button>
+    </div>
+
+    <div class="pane on" id="pane-events">
+      <div class="field"><label>Title</label><input type="text" id="docTitle"></div>
+      <div class="field"><label>Subtitle</label><input type="text" id="docSubtitle"></div>
+      <div class="drop" id="drop">Drop photos here, or click, to make one event per photo</div>
+      <div class="row" style="margin-bottom:10px">
+        <button class="btn" id="btnAdd">+ Add event</button>
+        <button class="btn" id="btnSort" title="Put dated events in date order. Undated events stay after the event above them.">Sort by date</button>
+      </div>
+      <div id="evList"></div>
+    </div>
+
+    <div class="pane" id="pane-lines">
+      <div id="trackEditors"></div>
+      <p class="hint">Both timelines share one ruler, so you can compare them: a band's career next to world events, or your life next to an artist's life.</p>
+      <label class="check"><input type="checkbox" id="showLegend"> Show a legend under the title</label>
+    </div>
+
+    <div class="pane" id="pane-style">
+      <div class="field"><span class="group-label">Shape</span><div class="chips" id="shapeChips"></div></div>
+      <div class="field" id="candyField"><span class="group-label">Board colors</span>
+        <div class="chips" id="candyChips"></div>
+        <div class="swatches" id="candyInputs" style="margin-top:8px"></div>
+        <p class="hint">Pick a set, or click any square above to make your own.</p>
+      </div>
+      <div class="field"><span class="group-label">Spacing</span>
+        <div class="chips" id="spacingChips"></div>
+        <p class="hint">By date puts real distance between years. Even spacing gives every event the same room.</p>
+      </div>
+      <hr>
+      <div class="field"><span class="group-label">Ruler</span><div class="chips" id="rulerChips"></div></div>
+      <div class="row">
+        <div class="field"><label>Ruler detail</label>
+          <select id="rulerDensity"><option value="sparse">Few marks</option><option value="auto">Smart</option><option value="dense">Many marks</option></select></div>
+        <div class="field"><label>Ruler labels</label>
+          <select id="rulerLabels"><option value="full">1920</option><option value="decade">1920s</option><option value="compact">'20</option></select></div>
+      </div>
+      <label class="check"><input type="checkbox" id="showTime"> Show time labels</label>
+      <label class="check"><input type="checkbox" id="showCardDates"> Show the date on each card</label>
+      <div class="field"><label>Date format</label>
+        <select id="dateFormat"><option value="long">August 10, 1920</option><option value="short">Aug 10, 1920</option><option value="numeric">1920-08-10</option></select></div>
+      <hr>
+      <div class="field"><span class="group-label">Cards</span><div class="chips" id="cardChips"></div></div>
+      <div class="row">
+        <div class="field"><label>Card size</label>
+          <select id="cardSize"><option value="180">Small</option><option value="240">Medium</option><option value="310">Large</option></select></div>
+        <div class="field"><label>Marker</label>
+          <select id="marker"><option value="dot">Dot</option><option value="diamond">Diamond</option><option value="square">Square</option><option value="star">Star</option><option value="ring">Ring</option></select></div>
+      </div>
+      <div class="field"><label>Line thickness</label><input type="range" id="lineWidth" min="2" max="16" step="1"></div>
+      <label class="check"><input type="checkbox" id="showCaptions"> Show captions</label>
+      <label class="check"><input type="checkbox" id="showCredits"> Show photo credits</label>
+      <hr>
+      <div class="field"><span class="group-label">Background</span><div class="swatches" id="bgSwatches"></div></div>
+    </div>
+
+    <div class="pane" id="pane-text">
+      <div class="field"><label>Font</label><select id="font"></select></div>
+      <div class="field"><label>Title font</label><select id="titleFont"></select></div>
+      <div class="field"><label>Title size</label><input type="range" id="titleSize" min="28" max="96" step="2"></div>
+      <div class="field"><label>Label size</label><input type="range" id="labelSize" min="11" max="30" step="1"></div>
+      <div class="field"><label>Event titles</label>
+        <select id="titleCase"><option value="none">As typed</option><option value="upper">ALL CAPS</option></select></div>
+      <div class="field"><label>Text color</label><div class="swatches" id="textSwatches"></div></div>
+      <label class="check"><input type="checkbox" id="boldTitles"> Bold event titles</label>
+      <label class="check"><input type="checkbox" id="italicCaptions"> Italic captions</label>
+      <label class="check"><input type="checkbox" id="dateInTrackColor"> Dates in the timeline's color</label>
+    </div>
+  </aside>
+
+  <div id="stageWrap">
+    <svg id="stage" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="zoombar"><span>Zoom</span><input type="range" id="zoom" min="30" max="250" value="100"><button class="btn small" id="zoomFit">Fit</button></div>
+  </div>
+</main>
+<button class="btn" id="exitPresent" title="Back to editing (Esc)">✎ Edit</button>
+<button class="btn" id="presentOrbit" title="See it as a 3D ring (O)">🪐 Orbit</button>
+<div id="playBar"><button id="pbPrev" title="Back (←)">⏮</button><button id="pbPause" title="Pause (Space)">⏸</button><button id="pbNext" title="Next (→)">⏭</button><div class="track"><div class="fill" id="pbFill"></div></div><span class="count" id="pbCount"></span><button id="pbStop" title="Stop and show everything">■</button><button id="pbReplay" title="Play again">↻</button></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const SVGNS = 'http://www.w3.org/2000/svg';
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MON = MONTHS.map(m => m.slice(0, 3));
+const STORE_KEY = 'timeline-maker-doc-v1';
+
+const FONTS = [
+  { id: 'avenir', name: 'Clean sans', stack: "'Avenir Next', 'Segoe UI', Helvetica, Arial, sans-serif" },
+  { id: 'helvetica', name: 'Helvetica', stack: "Helvetica, Arial, sans-serif" },
+  { id: 'georgia', name: 'Book serif', stack: "Georgia, 'Times New Roman', serif" },
+  { id: 'baskerville', name: 'Baskerville', stack: "Baskerville, 'Baskerville Old Face', Georgia, serif" },
+  { id: 'typewriter', name: 'Typewriter', stack: "'American Typewriter', 'Courier New', Courier, monospace" },
+  { id: 'futura', name: 'Futura', stack: "Futura, 'Century Gothic', 'Trebuchet MS', sans-serif" },
+  { id: 'marker', name: 'Marker', stack: "'Marker Felt', 'Comic Sans MS', 'Chalkboard SE', cursive" },
+  { id: 'chalk', name: 'Chalkboard', stack: "'Chalkboard SE', 'Comic Sans MS', cursive" },
+  { id: 'gill', name: 'Gill Sans', stack: "'Gill Sans', 'Gill Sans MT', Calibri, sans-serif" },
+  { id: 'impact', name: 'Poster', stack: "Impact, 'Arial Black', sans-serif" }
+];
+const BACKGROUNDS = [
+  { id: 'paper', c: '#faf6ee', ink: '#2b2a27' }, { id: 'white', c: '#ffffff', ink: '#222222' },
+  { id: 'sage', c: '#e6ece0', ink: '#24302a' }, { id: 'sky', c: '#e3eef5', ink: '#1d2c38' },
+  { id: 'blush', c: '#f6e6e0', ink: '#3a2420' }, { id: 'night', c: '#1d2230', ink: '#f1ece2' },
+  { id: 'chalkboard', c: '#2f3b33', ink: '#f3f0e6' }, { id: 'ink', c: '#111111', ink: '#f5f5f5' }
+];
+const TRACK_COLORS = ['#c8553d', '#2a6f97', '#7d9a72', '#d9a441', '#8a5a9e', '#3d3d3d', '#e07a9a', '#1f8a70'];
+const TEXT_COLORS = ['auto', '#2b2a27', '#ffffff', '#c8553d', '#2a6f97', '#3b5a35', '#6b3fa0'];
+
+const SHAPES = [
+  { id: 'line', name: 'Line' }, { id: 'vline', name: 'Tall' }, { id: 'wave', name: 'Wave' },
+  { id: 'zigzag', name: 'Zigzag' }, { id: 'snake', name: 'Snake' }, { id: 'stairs', name: 'Stairs' },
+  { id: 'arc', name: 'Rainbow' }, { id: 'circle', name: 'Circle' }, { id: 'spiral', name: 'Spiral' },
+  { id: 'candy', name: 'Candyland' }
+];
+const RULERS = [
+  { id: 'ticks', name: 'Ticks' }, { id: 'bands', name: 'Bands' }, { id: 'dots', name: 'Dots' },
+  { id: 'pills', name: 'Tags' }, { id: 'none', name: 'None' }
+];
+const CARDS = [
+  { id: 'card', name: 'Card' }, { id: 'polaroid', name: 'Polaroid' }, { id: 'bubble', name: 'Bubble' }, { id: 'plain', name: 'Plain' }
+];
+const CANDY_PALETTES = [
+  { id: 'classic', name: 'Candy', c: ['#e63946', '#f4a261', '#f6d55c', '#57b26a', '#3d8bd9', '#9b5de5'] },
+  { id: 'pastel', name: 'Pastel', c: ['#f4a6b8', '#fbc99d', '#fbe7a1', '#b5e3b0', '#a7cdf2', '#cdb4f0'] },
+  { id: 'ocean', name: 'Ocean', c: ['#03045e', '#0077b6', '#00b4d8', '#90e0ef', '#48cae4', '#023e8a'] },
+  { id: 'forest', name: 'Forest', c: ['#2d6a4f', '#52b788', '#95d5b2', '#a68a64', '#606c38', '#dda15e'] },
+  { id: 'sunset', name: 'Sunset', c: ['#6a040f', '#d00000', '#e85d04', '#faa307', '#ffba08', '#9d0208'] },
+  { id: 'neon', name: 'Neon', c: ['#ff00a8', '#00e5ff', '#c6ff00', '#ff6d00', '#7c4dff', '#00e676'] },
+  { id: 'gray', name: 'Grays', c: ['#2b2a27', '#5c5a55', '#8d8a83', '#bdb9b0', '#e2ded5', '#73706a'] },
+  { id: 'track', name: 'Line color', c: null },
+  { id: 'custom', name: 'My colors', c: null }
+];
+function candyColors(trackColor) {
+  const S = doc.settings, id = S.candyPalette || 'classic';
+  if (id === 'custom' && Array.isArray(S.candyCustom) && S.candyCustom.length) return S.candyCustom;
+  if (id === 'track') { const t = trackColor || doc.tracks[0].color; return [t, mix(t, '#ffffff', .35), mix(t, '#000000', .25), mix(t, '#ffffff', .6), mix(t, '#000000', .45), mix(t, '#ffffff', .18)]; }
+  return (CANDY_PALETTES.find(p => p.id === id) || CANDY_PALETTES[0]).c || CANDY_PALETTES[0].c;
+}
+const STARTERS = [
+  { id: 'blues', name: 'History of the Blues', url: 'starters/history-of-the-blues.json',
+    settings: { shape: 'line', ruler: 'bands', rulerLabels: 'decade', bg: 'paper', cardStyle: 'polaroid', font: 'georgia', titleFont: 'typewriter' },
+    tracks: [{ name: 'The blues', color: '#2a6f97' }] },
+  { id: 'blank', name: 'Blank timeline' }
+];
+
+function uid() { return Math.random().toString(36).slice(2, 10); }
+function defaultSettings() {
+  return {
+    shape: 'line', spacing: 'date', ruler: 'ticks', rulerDensity: 'auto', rulerLabels: 'full',
+    showTime: true, showCardDates: true, dateFormat: 'short', cardStyle: 'card', cardSize: 240,
+    marker: 'dot', lineWidth: 6, showCaptions: true, showCredits: true, bg: 'paper',
+    font: 'avenir', titleFont: 'avenir', titleSize: 52, labelSize: 16, textColor: 'auto',
+    titleCase: 'none', candyPalette: 'classic', candyCustom: null, boldTitles: true, italicCaptions: false, dateInTrackColor: true, showLegend: true, playSeconds: 30
+  };
+}
+function newDoc() {
+  return {
+    version: 1, title: 'My Timeline', subtitle: '',
+    tracks: [{ id: 'a', name: 'Timeline 1', color: TRACK_COLORS[0], on: true },
+             { id: 'b', name: 'Timeline 2', color: TRACK_COLORS[1], on: false }],
+    events: [], settings: defaultSettings()
+  };
+}
+function newEvent(track) {
+  return { id: uid(), track: track || 'a', title: 'New event', caption: '', precision: 'year',
+           y: new Date().getFullYear(), m: 1, d: 1, dateLabel: '', image: null, ar: 0.75, credit: '', note: '' };
+}
+
+let doc = newDoc();
+let selectedId = null;
+let lastLayout = null;
+let lastPath = null, lastP = null, lastEvs = [];
+let drag = null; // { id, frozen: {t0, t1}, u, moved }
+
+/* ---------- dates ---------- */
+function tval(e) {
+  if (!e || e.precision === 'none' || e.y === '' || e.y == null || isNaN(+e.y)) return null;
+  let t = +e.y;
+  if (e.precision === 'month' || e.precision === 'day') t += ((+e.m || 1) - 1) / 12;
+  if (e.precision === 'day') t += ((+e.d || 1) - 1) / 12 / 31;
+  return t;
+}
+function yearStr(y) { y = Math.round(y); return y < 0 ? `${-y} BCE` : String(y); }
+function fmtDate(e) {
+  if (e.dateLabel && e.dateLabel.trim()) return e.dateLabel.trim();
+  if (tval(e) == null) return '';
+  const f = doc.settings.dateFormat, y = yearStr(e.y), m = (+e.m || 1), d = (+e.d || 1);
+  if (e.precision === 'year') return y;
+  if (e.precision === 'month') return f === 'numeric' ? `${e.y}-${String(m).padStart(2, '0')}` : `${(f === 'long' ? MONTHS : MON)[m - 1]} ${y}`;
+  if (f === 'numeric') return `${e.y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  return `${(f === 'long' ? MONTHS : MON)[m - 1]} ${d}, ${y}`;
+}
+
+/* ---------- shapes: dense polylines in a local box ---------- */
+function shapePoints(id, n) {
+  const P = [];
+  const push = (x, y) => P.push({ x, y });
+  const count = Math.max(n, 1);
+  if (id === 'line') { for (let i = 0; i <= 200; i++) push(i / 200 * Math.max(1500, count * 190), 0); }
+  else if (id === 'vline') { for (let i = 0; i <= 200; i++) push(0, i / 200 * Math.max(1300, count * 170)); }
+  else if (id === 'wave') {
+    const W = Math.max(1600, count * 190);
+    for (let i = 0; i <= 600; i++) { const u = i / 600; push(u * W, 150 * Math.sin(u * Math.PI * 2 * Math.max(2, Math.round(W / 800)))); }
+  } else if (id === 'zigzag') {
+    const W = Math.max(1600, count * 190), k = Math.max(4, Math.round(W / 400));
+    for (let i = 0; i <= k; i++) push(i / k * W, i % 2 ? -150 : 150);
+  } else if (id === 'snake') {
+    const rows = count > 14 ? 4 : count > 6 ? 3 : 2, L = 1500, gap = 520, r = gap / 2;
+    for (let row = 0; row < rows; row++) {
+      const y = row * gap, ltr = row % 2 === 0;
+      for (let i = 0; i <= 100; i++) push(ltr ? i / 100 * L : L - i / 100 * L, y);
+      if (row < rows - 1) {
+        const cx = ltr ? L : 0;
+        for (let i = 1; i < 60; i++) {
+          const a = -Math.PI / 2 + i / 60 * Math.PI;
+          push(cx + (ltr ? 1 : -1) * r * Math.cos(a), y + r + r * Math.sin(a));
+        }
+      }
+    }
+  } else if (id === 'stairs') {
+    const steps = Math.max(4, Math.min(8, Math.ceil(count / 2))), run = 340, rise = 200;
+    let x = 0, y = 0; push(x, y);
+    for (let s = 0; s < steps; s++) { x += run; push(x, y); if (s < steps - 1) { y -= rise; push(x, y); } }
+  } else if (id === 'arc') {
+    const R = Math.max(800, count * 70);
+    for (let i = 0; i <= 400; i++) { const a = Math.PI - i / 400 * Math.PI; push(R * Math.cos(a), -R * Math.sin(a)); }
+  } else if (id === 'circle') {
+    const R = Math.max(560, count * 55);
+    for (let i = 0; i <= 500; i++) { const a = -Math.PI / 2 + i / 500 * Math.PI * 2 * 0.94; push(R * Math.cos(a), R * Math.sin(a)); }
+  } else if (id === 'candy') {
+    // board-game map: wavy rows that fill a screen-shaped board, joined by round U-turns
+    const rows = Math.max(3, Math.ceil(Math.sqrt(count / 3))), L = Math.max(2000, Math.ceil(count * 210 / rows)), gap = 560, r = gap / 2;
+    const waves = Math.max(2, Math.round(L / 700));
+    for (let row = 0; row < rows; row++) {
+      const y = row * gap, ltr = row % 2 === 0;
+      for (let i = 0; i <= 300; i++) { const u = i / 300, x = ltr ? u * L : L - u * L; push(x, y + 70 * Math.sin(u * Math.PI * 2 * waves)); }
+      if (row < rows - 1) {
+        const cx = ltr ? L : 0;
+        for (let i = 1; i < 60; i++) { const a = -Math.PI / 2 + i / 60 * Math.PI; push(cx + (ltr ? 1 : -1) * r * 1.2 * Math.cos(a), y + r + r * Math.sin(a)); }
+      }
+    }
+  } else if (id === 'spiral') {
+    const turns = 2.2, r0 = 170, b = 360 / (Math.PI * 2);
+    for (let i = 0; i <= 900; i++) { const th = i / 900 * turns * Math.PI * 2; const r = r0 + b * th; push(r * Math.cos(th - Math.PI / 2), r * Math.sin(th - Math.PI / 2)); }
+  }
+  return densify(P, 6);
+}
+function densify(P, step) {
+  const out = [P[0]];
+  for (let i = 1; i < P.length; i++) {
+    const a = P[i - 1], b = P[i], L = Math.hypot(b.x - a.x, b.y - a.y), k = Math.max(1, Math.ceil(L / step));
+    for (let j = 1; j <= k; j++) out.push({ x: a.x + (b.x - a.x) * j / k, y: a.y + (b.y - a.y) * j / k });
+  }
+  return out;
+}
+function makePath(pts) {
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  const total = cum[cum.length - 1];
+  // smoothed normals so corners (zigzag, stairs) do not flip markers
+  const normals = pts.map((p, i) => {
+    const a = pts[Math.max(0, i - 4)], b = pts[Math.min(pts.length - 1, i + 4)];
+    const tx = b.x - a.x, ty = b.y - a.y, L = Math.hypot(tx, ty) || 1;
+    return { x: -ty / L, y: tx / L };
+  });
+  function idx(u) {
+    const s = Math.max(0, Math.min(1, u)) * total;
+    let lo = 0, hi = cum.length - 1;
+    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (cum[mid] < s) lo = mid; else hi = mid; }
+    const f = cum[hi] === cum[lo] ? 0 : (s - cum[lo]) / (cum[hi] - cum[lo]);
+    return { lo, hi, f };
+  }
+  return {
+    pts, total,
+    at(u, off = 0) {
+      const { lo, hi, f } = idx(u), a = pts[lo], b = pts[hi], na = normals[lo], nb = normals[hi];
+      let nx = na.x + (nb.x - na.x) * f, ny = na.y + (nb.y - na.y) * f; const L = Math.hypot(nx, ny) || 1; nx /= L; ny /= L;
+      return { x: a.x + (b.x - a.x) * f + nx * off, y: a.y + (b.y - a.y) * f + ny * off, nx, ny };
+    },
+    d(u0 = 0, u1 = 1, off = 0) {
+      const n = Math.max(2, Math.ceil((u1 - u0) * pts.length));
+      let s = '';
+      for (let i = 0; i <= n; i++) { const p = this.at(u0 + (u1 - u0) * i / n, off); s += (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }
+      return s;
+    }
+  };
+}
+
+/* ---------- positions along the path ---------- */
+function positions(evs) {
+  const pos = new Map();
+  const N = evs.length;
+  if (!N) return { pos, t0: 0, t1: 1, mode: 'even' };
+  const dated = evs.map((e, i) => ({ i, t: tval(e) })).filter(o => o.t != null);
+  const tvals = dated.map(o => o.t);
+  const useDate = doc.settings.spacing === 'date' && dated.length >= 2 && Math.max(...tvals) > Math.min(...tvals);
+  if (!useDate) {
+    evs.forEach((e, i) => pos.set(e.id, N === 1 ? 0.5 : 0.05 + 0.9 * i / (N - 1)));
+    if (drag && drag.u != null) pos.set(drag.id, drag.u);
+    return { pos, mode: 'even' };
+  }
+  let tmin = Math.min(...tvals), tmax = Math.max(...tvals);
+  const pad = (tmax - tmin) * 0.06;
+  let t0 = tmin - pad, t1 = tmax + pad;
+  if (drag && drag.frozen) { t0 = drag.frozen.t0; t1 = drag.frozen.t1; }
+  const u = t => (t - t0) / (t1 - t0);
+  const uIdx = new Array(N).fill(null);
+  dated.forEach(o => { uIdx[o.i] = u(o.t); });
+  // undated events sit between their dated neighbors in list order
+  let i = 0;
+  while (i < N) {
+    if (uIdx[i] != null) { i++; continue; }
+    let j = i; while (j < N && uIdx[j] == null) j++;
+    const prev = i > 0 ? uIdx[i - 1] : null, next = j < N ? uIdx[j] : null, k = j - i;
+    for (let q = 0; q < k; q++) {
+      if (prev != null && next != null) uIdx[i + q] = prev + (next - prev) * (q + 1) / (k + 1);
+      else if (prev != null) uIdx[i + q] = Math.min(0.99, prev + (1 - prev) * (q + 1) / (k + 1));
+      else uIdx[i + q] = Math.max(0.01, next * (q + 1) / (k + 1));
+    }
+    i = j;
+  }
+  evs.forEach((e, k) => pos.set(e.id, uIdx[k]));
+  if (drag && drag.u != null && drag.frozen) pos.set(drag.id, drag.u);
+  return { pos, t0, t1, mode: 'date' };
+}
+
+/* ---------- smart ruler ---------- */
+function rulerTicks(t0, t1) {
+  const span = t1 - t0;
+  const target = { sparse: 5, auto: 9, dense: 16 }[doc.settings.rulerDensity] || 9;
+  const steps = [1 / 372, 7 / 372, 1 / 12, 3 / 12, 6 / 12, 1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000];
+  let step = steps[steps.length - 1];
+  for (const s of steps) { if (span / s <= target) { step = s; break; } }
+  const ticks = [];
+  const lab = doc.settings.rulerLabels;
+  const yLabel = y => {
+    if (lab === 'decade' && step >= 10 && y % 10 === 0) return (y < 0 ? yearStr(y) : String(y)) + 's';
+    if (lab === 'compact' && y >= 0) return "'" + String(Math.round(y) % 100).padStart(2, '0');
+    return yearStr(y);
+  };
+  if (step >= 1) {
+    for (let y = Math.ceil(t0 / step) * step; y <= t1; y += step) ticks.push({ t: y, label: yLabel(y), major: true });
+    const minor = step >= 10 ? step / (step % 25 === 0 ? 5 : 2) : step === 1 ? 1 / 4 : step / 2;
+    for (let y = Math.ceil(t0 / minor) * minor; y <= t1; y += minor) if (Math.abs(y / step - Math.round(y / step)) > 1e-6) ticks.push({ t: y, major: false });
+  } else if (step >= 1 / 12) {
+    const months = Math.round(step * 12);
+    let mIdx = Math.ceil(t0 * 12 / months) * months;
+    for (; mIdx / 12 <= t1; mIdx += months) {
+      const y = Math.floor(mIdx / 12), m = ((mIdx % 12) + 12) % 12;
+      ticks.push({ t: mIdx / 12, label: m === 0 || !ticks.length ? `${MON[m]} ${yearStr(y)}` : MON[m], major: true });
+    }
+  } else {
+    const days = Math.round(step * 372);
+    let k = Math.ceil(t0 * 372 / days) * days;
+    for (; k / 372 <= t1; k += days) {
+      const y = Math.floor(k / 372), rem = k - y * 372, m = Math.floor(rem / 31), d = rem % 31 + 1;
+      if (d > 28 && days > 1) continue;
+      ticks.push({ t: k / 372, label: `${MON[m]} ${d}`, major: true });
+    }
+  }
+  return ticks;
+}
+
+/* ---------- text measuring ---------- */
+const mctx = document.createElement('canvas').getContext('2d');
+function fontStack(id) { return (FONTS.find(f => f.id === id) || FONTS[0]).stack; }
+function wrap(text, size, weight, style, family, maxW, maxLines) {
+  mctx.font = `${style} ${weight} ${size}px ${family}`;
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines = []; let cur = '';
+  for (const w of words) {
+    const tryL = cur ? cur + ' ' + w : w;
+    if (mctx.measureText(tryL).width <= maxW || !cur) cur = tryL;
+    else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  if (maxLines && lines.length > maxLines) {
+    const keep = lines.slice(0, maxLines);
+    let last = keep[maxLines - 1];
+    while (last.length > 1 && mctx.measureText(last + '…').width > maxW) last = last.slice(0, -1);
+    keep[maxLines - 1] = last.replace(/\s+\S*$/, '') + '…';
+    return keep;
+  }
+  return lines;
+}
+
+/* ---------- svg helpers ---------- */
+function el(tag, attrs, parent) {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) if (attrs[k] != null) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function text(parent, x, y, str, o) {
+  const t = el('text', { x, y, 'font-family': o.family, 'font-size': o.size, 'font-weight': o.weight || 400,
+    'font-style': o.style || 'normal', fill: o.fill, 'text-anchor': o.anchor || 'start', 'dominant-baseline': o.baseline || 'alphabetic' }, parent);
+  t.textContent = str;
+  return t;
+}
+function mix(hex, other, amt) {
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const a = p(hex), b = p(other);
+  return '#' + a.map((v, i) => Math.round(v + (b[i] - v) * amt).toString(16).padStart(2, '0')).join('');
+}
+function markerShape(g, x, y, r, kind, color, bg) {
+  if (kind === 'diamond') el('rect', { x: x - r * .8, y: y - r * .8, width: r * 1.6, height: r * 1.6, fill: color, stroke: bg, 'stroke-width': 3, transform: `rotate(45 ${x} ${y})` }, g);
+  else if (kind === 'square') el('rect', { x: x - r * .85, y: y - r * .85, width: r * 1.7, height: r * 1.7, rx: 3, fill: color, stroke: bg, 'stroke-width': 3 }, g);
+  else if (kind === 'star') {
+    let d = '';
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .55 : r * 1.35; d += (i ? 'L' : 'M') + (x + rr * Math.cos(a)).toFixed(1) + ' ' + (y + rr * Math.sin(a)).toFixed(1); }
+    el('path', { d: d + 'Z', fill: color, stroke: bg, 'stroke-width': 2, 'stroke-linejoin': 'round' }, g);
+  } else if (kind === 'ring') el('circle', { cx: x, cy: y, r: r * .9, fill: bg, stroke: color, 'stroke-width': r * .55 }, g);
+  else el('circle', { cx: x, cy: y, r, fill: color, stroke: bg, 'stroke-width': 3 }, g);
+}
+
+/* ---------- render ---------- */
+const stage = document.getElementById('stage');
+function render() {
+  const S = doc.settings;
+  const bg = BACKGROUNDS.find(b => b.id === S.bg) || BACKGROUNDS[0];
+  const ink = S.textColor === 'auto' ? bg.ink : S.textColor;
+  const dark = ['night', 'chalkboard', 'ink'].includes(bg.id);
+  const fam = fontStack(S.font), tfam = fontStack(S.titleFont);
+  const tracks = doc.tracks.filter(t => t.on);
+  const trackIds = new Set(tracks.map(t => t.id));
+  const evs = doc.events.filter(e => trackIds.has(e.track));
+  while (stage.firstChild) stage.removeChild(stage.firstChild);
+  const defs = el('defs', {}, stage);
+  const bgRect = el('rect', { fill: bg.c }, stage);
+  const content = el('g', {}, stage);
+
+  const path = makePath(shapePoints(S.shape, evs.length));
+  const lw = +S.lineWidth;
+  const two = tracks.length === 2;
+  const gap = two ? Math.max(70, lw * 6) : 0;
+  const trackOff = id => !two ? 0 : (id === tracks[0].id ? -gap / 2 : gap / 2);
+  const P = positions(evs);
+  lastPath = path; lastP = P; lastEvs = evs;
+  const lineCol = dark ? mix(bg.c, '#ffffff', .35) : mix(bg.c, '#000000', .25);
+  const candy = S.shape === 'candy';
+  const tileH = two ? Math.max(40, gap - 12) : 64;
+  const rlw = candy ? tileH : lw; // how wide the line reads, for labels and card clearance
+
+  // ruler underlay
+  const rulerG = el('g', {}, content);
+  const showTime = S.showTime;
+  const tickList = [];
+  if (P.mode === 'date') rulerTicks(P.t0, P.t1).forEach(t => tickList.push({ u: (t.t - P.t0) / (P.t1 - P.t0), label: t.label, major: t.major }));
+  else evs.forEach(e => { const s = fmtDate(e); if (s) tickList.push({ u: P.pos.get(e.id), label: s, major: true }); });
+  const majors = tickList.filter(t => t.major).sort((a, b) => a.u - b.u);
+  const labelSide = two ? 0 : (S.shape === 'vline' ? -1 : 1);
+  const rlab = Math.round(S.labelSize * 0.9);
+  const rulerText = (u, str, solid) => {
+    if (!showTime || !str) return;
+    const off = two ? 0 : labelSide * (rlw / 2 + rlab + 6);
+    const p = path.at(u, off);
+    if (solid || two) {
+      mctx.font = `600 ${rlab}px ${fam}`;
+      const w = mctx.measureText(str).width + 14;
+      el('rect', { x: p.x - w / 2, y: p.y - rlab * .75, width: w, height: rlab * 1.5, rx: rlab * .75, fill: solid ? lineCol : bg.c, opacity: .96 }, rulerG);
+    }
+    text(rulerG, p.x, p.y, str, { family: fam, size: rlab, weight: 600, fill: solid ? bg.c : (dark ? mix(ink, bg.c, .2) : mix(ink, bg.c, .25)), anchor: 'middle', baseline: 'central' });
+  };
+  if (S.ruler === 'bands' && majors.length) {
+    const bounds = [0, ...majors.map(t => t.u).filter(u => u > 0 && u < 1), 1];
+    const bw = two ? gap + lw * 2.4 : lw * 4.5;
+    for (let i = 0; i < bounds.length - 1; i++) {
+      el('path', { d: path.d(bounds[i], bounds[i + 1]), stroke: i % 2 ? mix(lineCol, bg.c, .55) : mix(lineCol, bg.c, .25), 'stroke-width': bw, fill: 'none', 'stroke-linecap': 'butt' }, rulerG);
+    }
+    majors.forEach(t => { if (t.u >= 0 && t.u <= 1) rulerText(t.u, t.label, false); });
+  } else if (S.ruler !== 'none') {
+    if (!two && !candy) el('path', { d: path.d(), stroke: lineCol, 'stroke-width': lw, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, rulerG);
+    tickList.forEach(t => {
+      if (t.u < 0 || t.u > 1 || candy) return; // the board's own spaces stand in for ticks
+      const p = path.at(t.u);
+      const len = (two ? gap / 2 + lw : rlw * 1.6) * (t.major ? 1 : .55);
+      if (S.ruler === 'ticks') el('line', { x1: p.x - p.nx * len, y1: p.y - p.ny * len, x2: p.x + p.nx * len, y2: p.y + p.ny * len, stroke: lineCol, 'stroke-width': t.major ? 2.5 : 1.3 }, rulerG);
+      if (S.ruler === 'dots' && t.major) el('circle', { cx: p.x, cy: p.y, r: two ? 6 : lw * .9 + 3, fill: lineCol }, rulerG);
+    });
+    majors.forEach(t => { if (t.u >= 0 && t.u <= 1) rulerText(t.u, t.label, S.ruler === 'pills'); });
+  }
+
+  // board-game spaces: candy-colored tiles along the path, START and FINISH at the ends
+  if (candy) {
+    const tilesG = el('g', {}, content), tl = 58, n = Math.max(2, Math.floor(path.total / tl));
+    tracks.forEach((tr, ti) => {
+      const CANDY = candyColors(tr.color);
+      for (let i = 0; i < n; i++) {
+        const u = (i + 0.5) / n, p = path.at(u, trackOff(tr.id)), a = Math.atan2(-p.nx, p.ny) * 180 / Math.PI;
+        el('rect', { x: p.x - tl * .45, y: p.y - tileH / 2, width: tl * .9, height: tileH, rx: 9, fill: CANDY[(i + (S.candyPalette === 'track' ? 0 : ti * 3)) % CANDY.length], stroke: dark ? bg.c : '#ffffff', 'stroke-width': 3, transform: `rotate(${a.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)})`, class: 'tile', 'data-u': u.toFixed(4) }, tilesG);
+      }
+    });
+    const ends = candyColors(tracks[0].color);
+    [[0, 'START', -1], [1, 'FINISH', 1]].forEach(([u, word, dir]) => {
+      const p = path.at(u), tx = p.ny * dir, ty = -p.nx * dir, R0 = 62;
+      const cx = p.x + tx * (R0 + 12), cy = p.y + ty * (R0 + 12);
+      el('circle', { cx, cy, r: R0, fill: dir < 0 ? ends[3 % ends.length] : ends[0], stroke: dark ? bg.c : '#ffffff', 'stroke-width': 5, class: 'tile', 'data-u': dir < 0 ? '0' : '1' }, tilesG);
+      text(tilesG, cx, cy, word, { family: fam, size: 22, weight: 800, fill: '#ffffff', anchor: 'middle', baseline: 'central' }).setAttribute('class', 'tile');
+      lineSamplesExtra.push({ x: cx - R0, y: cy - R0, w: R0 * 2, h: R0 * 2 });
+    });
+  }
+
+  // tracks
+  tracks.forEach(tr => {
+    el('path', { d: path.d(0, 1, trackOff(tr.id)), pathLength: 1, class: 'trackline', stroke: tr.color, 'stroke-width': lw, 'stroke-opacity': candy ? 0 : null, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, content);
+    if (candy) return;
+    const end = path.at(1, trackOff(tr.id)), pre = path.at(0.995, trackOff(tr.id));
+    const ang = Math.atan2(end.y - pre.y, end.x - pre.x), a = lw * 2.4;
+    el('path', { d: `M${end.x + Math.cos(ang) * a} ${end.y + Math.sin(ang) * a} L${end.x + Math.cos(ang + 2.5) * a} ${end.y + Math.sin(ang + 2.5) * a} L${end.x + Math.cos(ang - 2.5) * a} ${end.y + Math.sin(ang - 2.5) * a}Z`, fill: tr.color, class: 'arrowhead' }, content);
+  });
+
+  // cards
+  const leadersG = el('g', {}, content), markersG = el('g', {}, content), cardsG = el('g', {}, content);
+  const sorted = evs.slice().sort((a, b) => P.pos.get(a.id) - P.pos.get(b.id));
+  placed = lineSamplesExtra.slice(); lineSamplesExtra = [];
+  lineSamples = path.pts.filter((_, i) => i % 3 === 0);
+  const cw = +S.cardSize;
+  const ls = +S.labelSize;
+  const outward = S.shape === 'circle' || S.shape === 'spiral';
+  sorted.forEach((e, k) => {
+    const tr = doc.tracks.find(t => t.id === e.track);
+    const u = P.pos.get(e.id);
+    const p = path.at(u, trackOff(e.track));
+    let side = two ? Math.sign(trackOff(e.track)) : (outward ? -1 : (k % 2 ? 1 : -1));
+    if (S.shape === 'arc' && !two) side = -1;
+    const card = buildCard(e, tr, { cw, ls, fam, ink, bg, k });
+    const box = placeCard(p, side, card, !two && !outward && S.shape !== 'arc', two ? gap / 2 + rlw / 2 + 8 : rlw * (candy ? .5 : 2) + (candy ? 10 : 0));
+    placed.push(box);
+    el('line', { x1: p.x, y1: p.y, x2: box.ax, y2: box.ay, stroke: tr.color, 'stroke-width': 2, 'stroke-dasharray': S.cardStyle === 'plain' ? '4 4' : null, opacity: .8, class: 'ld', 'data-id': e.id }, leadersG);
+    markerShape(el('g', { class: 'mk', 'data-id': e.id }, markersG), p.x, p.y, Math.max(7, lw * 1.25), S.marker, tr.color, bg.c);
+    card.g.setAttribute('transform', `translate(${box.x.toFixed(1)} ${box.y.toFixed(1)})` + (card.rot ? ` rotate(${card.rot} ${card.w / 2} ${card.h / 2})` : ''));
+    const inner = document.createElementNS(SVGNS, 'g'); inner.setAttribute('class', 'zoomable');
+    while (card.g.firstChild) inner.appendChild(card.g.firstChild);
+    card.g.appendChild(inner);
+    card.g.dataset.id = e.id;
+    card.g.classList.add('card');
+    if (e.id === selectedId) el('rect', { x: -6, y: -6, width: card.w + 12, height: card.h + 12, rx: 10, fill: 'none', stroke: '#e0a100', 'stroke-width': 3, 'stroke-dasharray': '8 5', class: 'sel-ring' }, card.g);
+    cardsG.appendChild(card.g);
+  });
+
+  if (!evs.length) {
+    text(content, path.at(.5).x, path.at(.5).y - 60, 'Add an event or drop photos to start', { family: fam, size: 26, fill: mix(ink, bg.c, .4), anchor: 'middle' });
+  }
+
+  // frame everything
+  let bb = content.getBBox();
+  const titleG = el('g', {}, stage);
+  const cx = bb.x + bb.width / 2;
+  let ty = bb.y - 40;
+  const titleLines = [];
+  if (doc.title) titleLines.push({ s: doc.title, size: +S.titleSize, w: 700, f: tfam });
+  if (doc.subtitle) titleLines.push({ s: doc.subtitle, size: Math.round(S.titleSize * .45), w: 400, f: fam });
+  let legend = two && S.showLegend;
+  let blockH = titleLines.reduce((h, l) => h + l.size * 1.25, 0) + (legend ? ls * 2.4 : 0);
+  let y = ty - blockH;
+  titleLines.forEach(l => { y += l.size; text(titleG, cx, y, l.s, { family: l.f, size: l.size, weight: l.w, fill: ink, anchor: 'middle' }); y += l.size * .25; });
+  if (legend) {
+    y += ls * 1.4;
+    mctx.font = `600 ${ls}px ${fam}`;
+    const items = tracks.map(t => ({ t, w: mctx.measureText(t.name).width + ls * 2.2 }));
+    const tw = items.reduce((s, i) => s + i.w, 0) + (items.length - 1) * ls * 1.5;
+    let x = cx - tw / 2;
+    items.forEach(i => {
+      el('rect', { x, y: y - ls * .55, width: ls * 1.5, height: ls * .55, rx: 3, fill: i.t.color }, titleG);
+      text(titleG, x + ls * 2, y, i.t.name, { family: fam, size: ls, weight: 600, fill: ink, baseline: 'central' });
+      x += i.w + ls * 1.5;
+    });
+  }
+  // credits footer for export (TASL)
+  const credits = evs.filter(e => e.image && e.credit).map(e => e.credit);
+  if (S.showCredits && credits.length) {
+    const fg = el('g', {}, stage);
+    const cs = Math.max(11, Math.round(ls * .7));
+    const lines = wrap('Image credits: ' + credits.map((c, i) => `${i + 1}. ${c}`).join('  '), cs, 400, 'normal', fam, Math.max(bb.width, 900), 0);
+    let fy = bb.y + bb.height + 50;
+    lines.forEach(l => { text(fg, cx, fy, l, { family: fam, size: cs, fill: mix(ink, bg.c, .4), anchor: 'middle' }); fy += cs * 1.35; });
+  }
+  const all = { x: Infinity, y: Infinity, r: -Infinity, b: -Infinity };
+  [content, titleG, ...stage.querySelectorAll(':scope > g')].forEach(g => {
+    const b = g.getBBox(); if (!b.width && !b.height) return;
+    all.x = Math.min(all.x, b.x); all.y = Math.min(all.y, b.y); all.r = Math.max(all.r, b.x + b.width); all.b = Math.max(all.b, b.y + b.height);
+  });
+  const pad = 70;
+  const vb = { x: all.x - pad, y: all.y - pad, w: all.r - all.x + pad * 2, h: all.b - all.y + pad * 2 };
+  stage.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  Object.assign(bgRect, {}); bgRect.setAttribute('x', vb.x); bgRect.setAttribute('y', vb.y); bgRect.setAttribute('width', vb.w); bgRect.setAttribute('height', vb.h);
+  lastLayout = vb;
+  if (play) applyPlay(true);
+  applyZoom();
+}
+
+
+/* card placement: try short leaders first, then slide along the line, flip sides, reach further out */
+let placed = [], lineSamples = [], lineSamplesExtra = [];
+function placeCard(p, side, card, mayFlip, lineClear) {
+  const tx = p.ny, ty = -p.nx;
+  const base = Math.max(46, doc.settings.lineWidth * 4);
+  const cands = [];
+  const sides = mayFlip ? [side, -side] : [side];
+  for (const sd of sides) for (let extra = 0; extra <= 900; extra += 30) for (const k of [0, -0.55, 0.55, -1.1, 1.1, -1.65, 1.65]) {
+    cands.push({ sd, extra, shift: k * card.w, cost: extra + Math.abs(k) * card.w * 0.55 + (sd !== side ? 70 : 0) });
+  }
+  cands.sort((a, b) => a.cost - b.cost);
+  const hit = b => placed.some(o => b.x < o.x + o.w + 14 && b.x + b.w + 14 > o.x && b.y < o.y + o.h + 14 && b.y + b.h + 14 > o.y)
+    || lineSamples.some(q => q.x > b.x - lineClear && q.x < b.x + b.w + lineClear && q.y > b.y - lineClear && q.y < b.y + b.h + lineClear);
+  let first = null;
+  for (const c of cands) {
+    const dx = p.nx * c.sd, dy = p.ny * c.sd, L = base + c.extra;
+    const ax = p.x + dx * L + tx * c.shift, ay = p.y + dy * L + ty * c.shift;
+    const half = Math.abs(dx) * card.w / 2 + Math.abs(dy) * card.h / 2;
+    const cx = ax + dx * half, cy = ay + dy * half;
+    const b = { x: cx - card.w / 2, y: cy - card.h / 2, w: card.w, h: card.h, ax, ay };
+    if (!first) first = b;
+    if (!hit(b)) return b;
+  }
+  return first;
+}
+
+function buildCard(e, tr, o) {
+  const S = doc.settings;
+  const g = document.createElementNS(SVGNS, 'g');
+  const style = S.cardStyle;
+  const bubble = style === 'bubble', polaroid = style === 'polaroid', plain = style === 'plain';
+  const pad = plain ? 0 : polaroid ? 12 : 14;
+  const inner = o.cw - pad * 2;
+  const txt = bubble ? '#ffffff' : (plain ? o.ink : (['night', 'chalkboard', 'ink'].includes(o.bg.id) && style === 'card' ? '#f3efe6' : '#2b2a27'));
+  const cardFill = bubble ? tr.color : (style === 'card' && ['night', 'chalkboard', 'ink'].includes(o.bg.id) ? '#2c3240' : '#ffffff');
+  const parts = [];
+  let y = pad;
+  if (e.image) {
+    const ih = Math.round(inner * Math.max(.45, Math.min(1.25, e.ar || .75)));
+    parts.push(() => {
+      const cid = 'c' + e.id;
+      const cp = el('clipPath', { id: cid }, stage.querySelector('defs'));
+      el('rect', { x: pad, y: imgY, width: inner, height: ih, rx: polaroid ? 2 : 8 }, cp);
+      el('image', { href: e.image, x: pad, y: imgY, width: inner, height: ih, preserveAspectRatio: 'xMidYMid slice', 'clip-path': `url(#${cid})` }, g);
+    });
+    var imgY = y; y += ih;
+    if (S.showCredits && e.credit) {
+      const cs = Math.max(9, Math.round(o.ls * .55));
+      const cl = wrap(e.credit, cs, 400, 'normal', o.fam, inner, 2);
+      const cy0 = y;
+      parts.push(() => cl.forEach((l, i) => text(g, pad, cy0 + cs * 1.25 * (i + 1), l, { family: o.fam, size: cs, fill: mix(txt, cardFill, .45) })));
+      y += cs * 1.25 * cl.length + 2;
+    }
+    y += polaroid ? 14 : 10;
+  }
+  const date = S.showTime && S.showCardDates ? fmtDate(e) : '';
+  if (date) {
+    const ds = Math.round(o.ls * .85), dy = y + ds;
+    parts.push(() => text(g, pad, dy, date, { family: o.fam, size: ds, weight: 700, fill: bubble ? '#ffffff' : (S.dateInTrackColor ? tr.color : txt) }));
+    y += ds * 1.35;
+  }
+  const ts = Math.round(o.ls * 1.08);
+  const title = S.titleCase === 'upper' ? (e.title || '').toUpperCase() : (e.title || '');
+  const tl = wrap(title, ts, S.boldTitles ? 700 : 400, 'normal', o.fam, inner, 4);
+  tl.forEach(l => { const yy = y + ts; parts.push(() => text(g, pad, yy, l, { family: o.fam, size: ts, weight: S.boldTitles ? 700 : 400, fill: txt })); y += ts * 1.2; });
+  if (S.showCaptions && e.caption) {
+    const cs = Math.round(o.ls * .86);
+    y += 4;
+    const cl = wrap(e.caption, cs, 400, S.italicCaptions ? 'italic' : 'normal', o.fam, inner, 7);
+    cl.forEach(l => { const yy = y + cs; parts.push(() => text(g, pad, yy, l, { family: o.fam, size: cs, style: S.italicCaptions ? 'italic' : 'normal', fill: bubble ? '#ffffff' : mix(txt, cardFill, .18) })); y += cs * 1.3; });
+  }
+  y += plain ? 0 : (polaroid ? 26 : pad);
+  const h = Math.max(y, 30);
+  if (!plain) {
+    el('rect', { x: 2, y: 3, width: o.cw, height: h, rx: polaroid ? 3 : 12, fill: '#000', opacity: .12 }, g);
+    el('rect', { x: 0, y: 0, width: o.cw, height: h, rx: polaroid ? 3 : 12, fill: cardFill, stroke: style === 'card' ? mix(tr.color, cardFill, .55) : (polaroid ? '#e4dccd' : 'none'), 'stroke-width': style === 'card' ? 2 : 1 }, g);
+    if (style === 'card') el('rect', { x: 0, y: 0, width: 6, height: h, rx: 3, fill: tr.color }, g);
+  }
+  parts.forEach(f => f());
+  return { g, w: o.cw, h, rot: polaroid ? (o.k % 3 === 0 ? -2 : o.k % 3 === 1 ? 1.5 : -0.8) : 0 };
+}
+
+/* ---------- zoom ---------- */
+const zoomEl = document.getElementById('zoom');
+let zoomFit = true;
+function applyZoom() {
+  if (!lastLayout) return;
+  const wrapEl = document.getElementById('stageWrap');
+  if (document.body.classList.contains('presenting')) { stage.removeAttribute('width'); stage.removeAttribute('height'); stage.style.width = '100vw'; stage.style.height = '100vh'; return; }
+  stage.style.width = ''; stage.style.height = '';
+  const avail = Math.max(300, wrapEl.clientWidth - 32), availH = Math.max(240, wrapEl.clientHeight - 90);
+  const fit = Math.min(avail / lastLayout.w, availH / lastLayout.h) * 100;
+  if (zoomFit) zoomEl.value = Math.max(30, Math.min(250, Math.round(fit / (fit || 1) * 100)));
+  const base = fit / 100;
+  const z = zoomFit ? 1 : +zoomEl.value / 100;
+  stage.setAttribute('width', Math.round(lastLayout.w * base * z));
+  stage.setAttribute('height', Math.round(lastLayout.h * base * z));
+}
+zoomEl.addEventListener('input', () => { zoomFit = false; applyZoom(); });
+document.getElementById('zoomFit').onclick = () => { zoomFit = true; zoomEl.value = 100; applyZoom(); };
+window.addEventListener('resize', () => applyZoom());
+
+/* ---------- persistence ---------- */
+let saveTimer = null, renderQueued = false;
+function changed(listToo) {
+  if (listToo) renderList();
+  if (!renderQueued) { renderQueued = true; requestAnimationFrame(() => { renderQueued = false; render(); }); }
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(doc)); }
+    catch (err) { toast('Too many photos to autosave here. Use Save file to keep your work.'); }
+  }, 600);
+}
+function loadDoc(d) {
+  const base = newDoc();
+  doc = Object.assign(base, d);
+  doc.settings = Object.assign(defaultSettings(), d.settings || {});
+  if (!Array.isArray(doc.tracks) || doc.tracks.length < 2) doc.tracks = base.tracks.map((t, i) => Object.assign(t, (d.tracks || [])[i] || {}));
+  doc.events = (doc.events || []).map(e => Object.assign(newEvent(), e));
+  selectedId = null;
+  syncControls(); renderList(); changed();
+}
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
+function slug(s) { return (s || 'timeline').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'timeline'; }
+function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+
+/* ---------- images ---------- */
+function shrinkImage(blob, maxSide = 1000) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+      const cx = c.getContext('2d');
+      const png = blob.type === 'image/png';
+      if (!png) { cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height); }
+      cx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res({ data: c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.85), ar: c.height / c.width });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Not an image')); };
+    img.src = url;
+  });
+}
+async function addPhotos(files) {
+  const imgs = [...files].filter(f => f.type.startsWith('image/'));
+  if (!imgs.length) return;
+  const track = (doc.events.find(e => e.id === selectedId) || {}).track || 'a';
+  for (const f of imgs) {
+    try {
+      const { data, ar } = await shrinkImage(f);
+      const e = newEvent(track);
+      e.title = f.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+      e.precision = 'none'; e.image = data; e.ar = ar;
+      doc.events.push(e); selectedId = e.id;
+    } catch (err) { toast(`Could not read ${f.name}`); }
+  }
+  changed(true);
+  toast(`${imgs.length} photo${imgs.length > 1 ? 's' : ''} added. Give each one a title and a date.`);
+}
+
+/* ---------- export ---------- */
+async function exportPng() {
+  const prevSel = selectedId; selectedId = null; render();
+  const vb = lastLayout, scale = Math.min(3, 6000 / Math.max(vb.w, vb.h)) || 2;
+  const clone = stage.cloneNode(true);
+  clone.setAttribute('width', Math.round(vb.w * scale)); clone.setAttribute('height', Math.round(vb.h * scale));
+  clone.removeAttribute('style');
+  const src = new XMLSerializer().serializeToString(clone);
+  const url = URL.createObjectURL(new Blob([src], { type: 'image/svg+xml;charset=utf-8' }));
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas'); c.width = Math.round(vb.w * scale); c.height = Math.round(vb.h * scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    try { c.toBlob(b => { download(b, slug(doc.title) + '.png'); toast('PNG saved to your downloads'); }, 'image/png'); }
+    catch (err) { toast('This browser blocked the export. Try Chrome.'); }
+    selectedId = prevSel; render();
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('Export failed. Try Chrome.'); selectedId = prevSel; render(); };
+  img.src = url;
+}
+
+/* ---------- starters ---------- */
+async function loadStarter(st) {
+  if (st.id === 'blank') { loadDoc(newDoc()); return; }
+  try {
+    const r = await fetch(st.url, { cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const d = newDoc();
+    d.title = data.title || st.name; d.subtitle = data.subtitle || '';
+    Object.assign(d.settings, st.settings || {});
+    (st.tracks || []).forEach((t, i) => Object.assign(d.tracks[i], t));
+    const base = new URL(st.url, location.href);
+    for (const ev of data.events || []) {
+      const e = newEvent('a');
+      e.title = ev.title || ''; e.caption = ev.caption || ''; e.note = ev.why12bar || '';
+      const [y, m, dd] = String(ev.date || '').split('-');
+      e.precision = ev.precision || (dd ? 'day' : m ? 'month' : y ? 'year' : 'none');
+      e.y = y ? +y : ''; e.m = m ? +m : 1; e.d = dd ? +dd : 1;
+      if (ev.dateLabel) e.dateLabel = ev.dateLabel;
+      if (ev.credit) { const c = ev.credit; e.credit = [c.title ? `"${c.title}"` : '', c.author ? `by ${c.author}` : '', c.license || '', 'via Wikimedia Commons'].filter(Boolean).join(', ').replace(', by', ' by'); }
+      if (ev.image) {
+        try { const b = await (await fetch(new URL(ev.image, base))).blob(); const s = await shrinkImage(b, 800); e.image = s.data; e.ar = s.ar; } catch (err) { /* image optional */ }
+      }
+      d.events.push(e);
+    }
+    loadDoc(d);
+    toast(`${st.name} loaded`);
+  } catch (err) {
+    toast('Starter not available here. Open the tool from its web address.');
+  }
+}
+
+/* ---------- controls ---------- */
+const $ = id => document.getElementById(id);
+function chipIcon(kind, id) {
+  const sv = `<svg viewBox="0 0 52 30" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">`;
+  const shapes = {
+    line: '<path d="M4 15H48"/>', vline: '<path d="M26 3V27"/>', wave: '<path d="M4 15C10 3 16 3 20 15S30 27 34 15 44 3 48 15"/>',
+    zigzag: '<path d="M4 22L13 8L22 22L31 8L40 22L48 10"/>', snake: '<path d="M4 6H40C48 6 48 15 40 15H12C4 15 4 24 12 24H48"/>',
+    stairs: '<path d="M4 26H14V19H24V12H34V5H48"/>', arc: '<path d="M6 27C6 5 46 5 46 27"/>',
+    circle: '<path d="M26 4A11 11 0 1 1 20 5.5"/>', candy: '<path d="M4 5C14 1 24 9 34 5S44 3 46 9C48 15 40 15 30 15S14 13 8 17C2 21 8 26 18 25S38 23 48 26" stroke-width="4" stroke-dasharray="4 3"/>', spiral: '<path d="M26 15m-2 0a2 2 0 1 1 4 0a6 6 0 1 1-10 2a10 10 0 1 1 18-4"/>'
+  };
+  const rulers = {
+    ticks: '<path d="M4 15H48M10 10V20M20 10V20M30 10V20M40 10V20"/>', bands: '<path d="M4 15H17" stroke-width="7" opacity=".4"/><path d="M17 15H30" stroke-width="7" opacity=".8"/><path d="M30 15H48" stroke-width="7" opacity=".4"/>',
+    dots: '<path d="M4 15H48"/><circle cx="12" cy="15" r="3" fill="currentColor"/><circle cx="26" cy="15" r="3" fill="currentColor"/><circle cx="40" cy="15" r="3" fill="currentColor"/>',
+    pills: '<path d="M4 15H48"/><rect x="8" y="10" width="14" height="10" rx="5" fill="currentColor"/><rect x="30" y="10" width="14" height="10" rx="5" fill="currentColor"/>',
+    none: '<path d="M4 15H48" opacity=".35"/>'
+  };
+  const cards = {
+    card: '<rect x="12" y="4" width="28" height="22" rx="4"/><path d="M12 6V24" stroke-width="4"/>', polaroid: '<rect x="14" y="3" width="24" height="25" rx="1" transform="rotate(-6 26 15)"/><rect x="17" y="6" width="18" height="14" transform="rotate(-6 26 15)" fill="currentColor" opacity=".3"/>',
+    bubble: '<rect x="12" y="4" width="28" height="22" rx="8" fill="currentColor" opacity=".5"/>', plain: '<path d="M14 10H38M14 16H34M14 22H30"/>'
+  };
+  return sv + ({ shape: shapes, ruler: rulers, card: cards }[kind][id] || '') + '</svg>';
+}
+function buildChips(container, list, kind, key) {
+  const box = $(container); box.innerHTML = '';
+  list.forEach(item => {
+    const b = document.createElement('button'); b.className = 'chip'; b.type = 'button';
+    b.innerHTML = (kind ? chipIcon(kind, item.id) : '') + `<span>${item.name}</span>`;
+    b.onclick = () => { doc.settings[key] = item.id; syncControls(); changed(); };
+    b.dataset.v = item.id; box.appendChild(b);
+  });
+}
+buildChips('shapeChips', SHAPES, 'shape', 'shape');
+buildChips('rulerChips', RULERS, 'ruler', 'ruler');
+buildChips('cardChips', CARDS, 'card', 'cardStyle');
+function buildCandyChips() {
+  const box = $('candyChips'); box.innerHTML = '';
+  CANDY_PALETTES.forEach(p => {
+    if (p.id === 'custom' && !Array.isArray(doc.settings.candyCustom)) return;
+    const b = document.createElement('button'); b.className = 'chip'; b.type = 'button'; b.dataset.v = p.id;
+    const cols = p.id === 'custom' ? doc.settings.candyCustom : p.id === 'track' ? null : p.c;
+    const swatch = cols || [0, .35, -.25, .6, -.45, .18].map(a => a >= 0 ? mix(doc.tracks[0].color, '#ffffff', a) : mix(doc.tracks[0].color, '#000000', -a));
+    b.innerHTML = `<span class="pal">${swatch.map(c => `<i style="background:${c}"></i>`).join('')}</span><span>${p.name}</span>`;
+    b.onclick = () => { doc.settings.candyPalette = p.id; syncControls(); changed(); };
+    box.appendChild(b);
+  });
+  // the current colors as editable squares; editing one turns them into "My colors"
+  const ib = $('candyInputs'); ib.innerHTML = '';
+  candyColors(doc.tracks[0].color).forEach((c, i) => {
+    const inp = document.createElement('input'); inp.type = 'color'; inp.value = c; inp.title = 'Change this color';
+    inp.addEventListener('input', () => {
+      const cur = candyColors(doc.tracks[0].color).slice(); cur[i] = inp.value;
+      doc.settings.candyCustom = cur; doc.settings.candyPalette = 'custom'; changed();
+    });
+    inp.addEventListener('change', () => syncControls());
+    ib.appendChild(inp);
+  });
+}
+buildChips('spacingChips', [{ id: 'date', name: 'By date' }, { id: 'even', name: 'Even' }], null, 'spacing');
+['font', 'titleFont'].forEach(id => { $(id).innerHTML = FONTS.map(f => `<option value="${f.id}" style="font-family:${f.stack.replace(/"/g, "'")}">${f.name}</option>`).join(''); });
+(function bgSw() {
+  const box = $('bgSwatches');
+  BACKGROUNDS.forEach(b => { const s = document.createElement('button'); s.className = 'swatch'; s.style.background = b.c; s.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,.2)'; s.title = b.id; s.dataset.v = b.id; s.onclick = () => { doc.settings.bg = b.id; syncControls(); changed(); }; box.appendChild(s); });
+  const tbox = $('textSwatches');
+  TEXT_COLORS.forEach(c => { const s = document.createElement('button'); s.className = 'swatch'; s.dataset.v = c; s.title = c === 'auto' ? 'Automatic' : c; s.style.background = c === 'auto' ? 'linear-gradient(135deg,#2b2a27 50%,#faf6ee 50%)' : c; s.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,.2)'; s.onclick = () => { doc.settings.textColor = c; syncControls(); changed(); }; tbox.appendChild(s); });
+})();
+
+const bindSel = ['playSeconds', 'rulerDensity', 'rulerLabels', 'dateFormat', 'cardSize', 'marker', 'font', 'titleFont', 'titleCase'];
+const bindRange = ['lineWidth', 'titleSize', 'labelSize'];
+const bindCheck = ['showTime', 'showCardDates', 'showCaptions', 'showCredits', 'boldTitles', 'italicCaptions', 'dateInTrackColor', 'showLegend'];
+bindSel.forEach(id => $(id).addEventListener('change', () => { doc.settings[id] = $(id).value; changed(); }));
+bindRange.forEach(id => $(id).addEventListener('input', () => { doc.settings[id] = +$(id).value; changed(); }));
+bindCheck.forEach(id => $(id).addEventListener('change', () => { doc.settings[id] = $(id).checked; changed(); }));
+$('docTitle').addEventListener('input', e => { doc.title = e.target.value; changed(); });
+$('docSubtitle').addEventListener('input', e => { doc.subtitle = e.target.value; changed(); });
+
+function syncControls() {
+  const S = doc.settings;
+  bindSel.forEach(id => $(id).value = String(S[id]));
+  bindRange.forEach(id => $(id).value = S[id]);
+  bindCheck.forEach(id => $(id).checked = !!S[id]);
+  $('docTitle').value = doc.title; $('docSubtitle').value = doc.subtitle;
+  [['shapeChips', 'shape'], ['rulerChips', 'ruler'], ['cardChips', 'cardStyle'], ['spacingChips', 'spacing']].forEach(([c, k]) => $(c).querySelectorAll('.chip').forEach(b => b.classList.toggle('on', b.dataset.v === S[k])));
+  $('bgSwatches').querySelectorAll('.swatch').forEach(b => b.classList.toggle('on', b.dataset.v === S.bg));
+  document.body.classList.toggle('candy-shape', S.shape === 'candy');
+  if (S.shape === 'candy') { buildCandyChips(); $('candyChips').querySelectorAll('.chip').forEach(b => b.classList.toggle('on', b.dataset.v === (S.candyPalette || 'classic'))); }
+  $('textSwatches').querySelectorAll('.swatch').forEach(b => b.classList.toggle('on', b.dataset.v === S.textColor));
+  renderTrackEditors();
+}
+
+function renderTrackEditors() {
+  const box = $('trackEditors'); box.innerHTML = '';
+  doc.tracks.forEach((t, i) => {
+    const wrapD = document.createElement('div'); wrapD.className = 'field';
+    const isSecond = i === 1;
+    wrapD.innerHTML = `
+      ${isSecond ? `<label class="check"><input type="checkbox" ${t.on ? 'checked' : ''} data-k="on"> Add a second timeline</label>` : '<span class="group-label">First timeline</span>'}
+      <div ${isSecond && !t.on ? 'style="opacity:.45;pointer-events:none"' : ''}>
+        <input type="text" value="${(t.name || '').replace(/"/g, '&quot;')}" data-k="name" placeholder="Name" style="margin:4px 0 8px">
+        <div class="swatches">${TRACK_COLORS.map(c => `<button class="swatch ${c === t.color ? 'on' : ''}" style="background:${c}" data-c="${c}" title="${c}"></button>`).join('')}
+        <input type="color" value="${t.color}" data-k="color" title="Any color"></div>
+      </div>${isSecond ? '' : '<hr>'}`;
+    wrapD.querySelector('[data-k=name]').addEventListener('input', e => { t.name = e.target.value; changed(true); });
+    wrapD.querySelector('[data-k=color]').addEventListener('input', e => { t.color = e.target.value; changed(true); renderTrackEditors(); });
+    wrapD.querySelectorAll('[data-c]').forEach(b => b.onclick = () => { t.color = b.dataset.c; changed(true); renderTrackEditors(); });
+    const on = wrapD.querySelector('[data-k=on]');
+    if (on) on.addEventListener('change', e => { t.on = e.target.checked; changed(true); renderTrackEditors(); });
+    box.appendChild(wrapD);
+  });
+}
+
+function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+function renderList() {
+  const box = $('evList'); box.innerHTML = '';
+  const two = doc.tracks[1].on;
+  if (!doc.events.length) { box.innerHTML = '<p class="hint">No events yet.</p>'; return; }
+  doc.events.forEach((e, i) => {
+    const tr = doc.tracks.find(t => t.id === e.track) || doc.tracks[0];
+    const d = document.createElement('div'); d.className = 'ev' + (e.id === selectedId ? ' sel' : ''); d.dataset.id = e.id;
+    const dateTxt = fmtDate(e) || 'No date';
+    d.innerHTML = `
+      <div class="ev-head">
+        ${e.image ? `<img class="thumb" src="${e.image}" alt="">` : `<span class="dot" style="background:${tr.color}"></span>`}
+        <div class="t"><b>${esc(e.title) || 'Untitled'}</b><span>${esc(dateTxt)}${two ? ' · ' + esc(tr.name) : ''}</span></div>
+      </div>
+      <div class="ev-body">
+        <div class="field"><label>Title</label><input type="text" data-k="title" value="${esc(e.title)}"></div>
+        <div class="field"><label>Caption</label><textarea data-k="caption">${esc(e.caption)}</textarea></div>
+        <div class="field"><label>When</label>
+          <select data-k="precision">
+            <option value="none">No date</option><option value="year">Year</option><option value="month">Month and year</option><option value="day">Exact day</option>
+          </select></div>
+        <div class="row date-row" style="margin-bottom:10px">
+          <input type="number" data-k="y" placeholder="Year" value="${esc(e.y)}" title="Year (use a minus sign for BCE)">
+          <select data-k="m">${MONTHS.map((m, k) => `<option value="${k + 1}" ${+e.m === k + 1 ? 'selected' : ''}>${m}</option>`).join('')}</select>
+          <input type="number" data-k="d" min="1" max="31" value="${esc(e.d)}" title="Day">
+        </div>
+        <div class="field"><label>Custom date text (optional)</label><input type="text" data-k="dateLabel" value="${esc(e.dateLabel)}" placeholder='e.g. "Late 1800s" or "My first week"'></div>
+        ${two ? `<div class="field"><label>Timeline</label><select data-k="track">${doc.tracks.map(t => `<option value="${t.id}" ${t.id === e.track ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>` : ''}
+        <div class="field"><label>Photo credit</label><input type="text" data-k="credit" value="${esc(e.credit)}" placeholder="Who took it, the license, where it came from"></div>
+        ${e.note ? `<p class="hint">Note: ${esc(e.note)}</p>` : ''}
+        <div class="ev-tools">
+          <button class="btn small" data-a="photo">${e.image ? 'Change photo' : 'Add photo'}</button>
+          ${e.image ? '<button class="btn small" data-a="nophoto">Remove photo</button>' : ''}
+          <button class="btn small" data-a="up" ${i === 0 ? 'disabled' : ''}>↑</button>
+          <button class="btn small" data-a="down" ${i === doc.events.length - 1 ? 'disabled' : ''}>↓</button>
+          <button class="btn small" data-a="dup">Duplicate</button>
+          <button class="btn small danger" data-a="del">Delete</button>
+        </div>
+      </div>`;
+    const prec = d.querySelector('[data-k=precision]'); prec.value = e.precision;
+    const syncDateRow = () => {
+      const row = d.querySelector('.date-row'), p = e.precision;
+      row.style.display = p === 'none' ? 'none' : 'flex';
+      row.children[1].style.display = p === 'month' || p === 'day' ? '' : 'none';
+      row.children[2].style.display = p === 'day' ? '' : 'none';
+    };
+    syncDateRow();
+    d.querySelector('.ev-head').onclick = () => { selectedId = selectedId === e.id ? null : e.id; renderList(); changed(); };
+    const head = () => { d.querySelector('.ev-head b').textContent = e.title || 'Untitled'; d.querySelector('.ev-head span').textContent = (fmtDate(e) || 'No date') + (two ? ' · ' + tr.name : ''); };
+    d.querySelectorAll('[data-k]').forEach(inp => {
+      const k = inp.dataset.k;
+      inp.addEventListener(inp.tagName === 'SELECT' ? 'change' : 'input', () => {
+        e[k] = ['y', 'm', 'd'].includes(k) ? (inp.value === '' ? '' : +inp.value) : inp.value;
+        if (k === 'precision') { if (e.precision !== 'none' && (e.y === '' || e.y == null)) e.y = new Date().getFullYear(); syncDateRow(); }
+        if (k === 'track') { changed(true); return; }
+        if (['y', 'm', 'd', 'precision'].includes(k)) { sortEvents(); reorderListDom(); }
+        head(); changed();
+      });
+    });
+    d.querySelectorAll('[data-a]').forEach(b => b.onclick = ev => {
+      ev.stopPropagation();
+      const a = b.dataset.a, idx = doc.events.indexOf(e);
+      if (a === 'photo') { photoTarget = e; $('fileOnePhoto').click(); return; }
+      if (a === 'nophoto') { e.image = null; e.credit = ''; }
+      if (a === 'up' && idx > 0) [doc.events[idx - 1], doc.events[idx]] = [doc.events[idx], doc.events[idx - 1]];
+      if (a === 'down' && idx < doc.events.length - 1) [doc.events[idx + 1], doc.events[idx]] = [doc.events[idx], doc.events[idx + 1]];
+      if (a === 'dup') { const c = Object.assign({}, e, { id: uid() }); doc.events.splice(idx + 1, 0, c); selectedId = c.id; }
+      if (a === 'del') {
+        if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Click again to delete'; setTimeout(() => { b.classList.remove('armed'); b.textContent = 'Delete'; }, 2500); return; }
+        doc.events.splice(idx, 1); selectedId = null;
+      }
+      changed(true);
+    });
+    box.appendChild(d);
+  });
+}
+let photoTarget = null;
+$('fileOnePhoto').addEventListener('change', async ev => {
+  const f = ev.target.files[0]; ev.target.value = '';
+  if (!f || !photoTarget) return;
+  try { const s = await shrinkImage(f); photoTarget.image = s.data; photoTarget.ar = s.ar; changed(true); } catch (err) { toast('Could not read that image'); }
+});
+
+$('btnAdd').onclick = () => {
+  const sel = doc.events.find(e => e.id === selectedId);
+  const e = newEvent(sel ? sel.track : 'a');
+  const last = doc.events.filter(x => tval(x) != null).pop();
+  if (last) { e.y = last.y; e.precision = last.precision === 'none' ? 'year' : last.precision; e.m = last.m; e.d = last.d; }
+  doc.events.push(e); selectedId = e.id; changed(true);
+  setTimeout(() => { const n = document.querySelector(`.ev[data-id="${e.id}"] [data-k=title]`); if (n) { n.focus(); n.select(); n.scrollIntoView({ block: 'center' }); } }, 30);
+};
+function sortEvents() {
+  // dated events sort by date; each undated event travels with the event above it
+  const groups = []; let cur = null;
+  doc.events.forEach(e => { if (tval(e) != null || !cur) { cur = { t: tval(e), items: [e] }; groups.push(cur); } else cur.items.push(e); });
+  groups.sort((a, b) => (a.t ?? -Infinity) - (b.t ?? -Infinity));
+  doc.events = groups.flatMap(g => g.items);
+}
+// move the existing list rows into the new order so typing focus survives
+function reorderListDom() {
+  const box = $('evList');
+  const active = document.activeElement;
+  const order = doc.events.map(e => e.id).join(), now = [...box.querySelectorAll('.ev')].map(r => r.dataset.id).join();
+  if (order === now) return;
+  doc.events.forEach((e, i) => {
+    const row = box.querySelector(`.ev[data-id="${e.id}"]`); if (!row) return;
+    box.appendChild(row);
+    const up = row.querySelector('[data-a=up]'), down = row.querySelector('[data-a=down]');
+    if (up) up.disabled = i === 0; if (down) down.disabled = i === doc.events.length - 1;
+  });
+  if (active && box.contains(active)) { active.focus({ preventScroll: true }); active.scrollIntoView({ block: 'nearest' }); }
+}
+$('btnSort').onclick = () => { sortEvents(); changed(true); toast('Sorted by date'); };
+$('btnNew').onclick = function () {
+  if (doc.events.length && !this.classList.contains('armed')) { this.classList.add('armed', 'danger'); this.textContent = 'Click again: start over'; setTimeout(() => { this.classList.remove('armed', 'danger'); this.textContent = 'New'; }, 2500); return; }
+  this.classList.remove('armed', 'danger'); this.textContent = 'New'; loadDoc(newDoc());
+};
+$('btnSave').onclick = () => { download(new Blob([JSON.stringify(doc)], { type: 'application/json' }), slug(doc.title) + '.timeline.json'); toast('Saved. Open this file later to keep working.'); };
+$('btnOpen').onclick = () => $('fileOpen').click();
+$('fileOpen').addEventListener('change', async ev => {
+  const f = ev.target.files[0]; ev.target.value = ''; if (!f) return;
+  try { loadDoc(JSON.parse(await f.text())); toast('Timeline opened'); } catch (err) { toast('That file is not a timeline'); }
+});
+$('btnPng').onclick = exportPng;
+function exitPresent() {
+  stopPlay();
+  document.body.classList.remove('presenting'); stage.classList.remove('focusing');
+  if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  render();
+}
+$('exitPresent').onclick = exitPresent;
+$('btnPresent').onclick = () => {
+  document.body.classList.add('presenting'); selectedId = null; render();
+  if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+};
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('presenting')) exitPresent(); });
+document.addEventListener('keydown', e => {
+  if (!document.body.classList.contains('presenting')) return;
+  if (e.key === 'Escape') { const f = stage.querySelector('.card.focus'); if (f) unfocusCards(); else exitPresent(); }
+});
+function unfocusCards() { stage.querySelectorAll('.card.focus').forEach(c => c.classList.remove('focus')); stage.classList.remove('focusing'); }
+
+/* ---------- play: reveal events one by one while the presenter talks ---------- */
+let play = null; // { order: [ids], us: [u], dur, elapsed, last, paused, shown }
+function playTimes() {
+  // card k appears at (k + 0.5) * step; the line reaches it at the same moment and ends at 1 when time runs out
+  const n = play.order.length, step = play.dur / n;
+  return play.order.map((_, k) => (k + 0.5) * step);
+}
+function lineUAt(t) {
+  const times = playTimes(), pts = [[0, 0], ...times.map((tt, k) => [tt, play.us[k]]), [play.dur, 1]];
+  for (let i = 1; i < pts.length; i++) if (t <= pts[i][0]) { const [t0, u0] = pts[i - 1], [t1, u1] = pts[i]; return u0 + (u1 - u0) * ((t - t0) / ((t1 - t0) || 1)); }
+  return 1;
+}
+function applyPlay(force) {
+  if (!play) return;
+  const times = playTimes();
+  let shown = 0; while (shown < times.length && play.elapsed >= times[shown]) shown++;
+  const lu = Math.max(0, Math.min(1, lineUAt(play.elapsed)));
+  stage.classList.add('playing');
+  stage.classList.toggle('done', play.elapsed >= play.dur);
+  stage.querySelectorAll('.trackline').forEach(pth => { pth.setAttribute('stroke-dasharray', '1 1'); pth.setAttribute('stroke-dashoffset', String(1 - lu)); });
+  stage.querySelectorAll('rect.tile, circle.tile').forEach(t => t.classList.toggle('pending', +t.dataset.u > lu + 1e-4));
+  const key = shown + (play.elapsed >= play.dur ? 'done' : '');
+  if (force || key !== play.shown) {
+    const visible = new Set(play.order.slice(0, shown));
+    stage.querySelectorAll('.card, .mk, .ld').forEach(n => n.classList.toggle('pending', !visible.has(n.dataset.id)));
+    unfocusCards();
+    const cur = shown > 0 && play.elapsed < play.dur ? stage.querySelector(`.card[data-id="${play.order[shown - 1]}"]`) : null;
+    if (cur && shown > 1) { cur.parentNode.appendChild(cur); cur.classList.add('focus'); stage.classList.add('focusing'); }
+    else if (cur) { cur.parentNode.appendChild(cur); cur.classList.add('focus'); }
+    play.shown = key;
+  }
+  $('pbFill').style.width = (100 * Math.min(1, play.elapsed / play.dur)) + '%';
+  $('pbCount').textContent = `${shown} / ${play.order.length}`;
+  $('pbPause').textContent = play.paused || play.elapsed >= play.dur ? '▶' : '⏸';
+  document.body.classList.toggle('paused', !!play.paused || play.elapsed >= play.dur);
+}
+function tick(now) {
+  if (!play) return;
+  if (!play.paused && play.elapsed < play.dur) { play.elapsed = Math.min(play.dur, play.elapsed + (now - play.last) / 1000); }
+  play.last = now;
+  applyPlay(false);
+  requestAnimationFrame(tick);
+}
+function startPlay(fromK, paused) {
+  if (!document.body.classList.contains('presenting')) $('btnPresent').onclick();
+  else render();
+  if (!lastP || !lastEvs.length) { toast('Add some events first'); return; }
+  const order = lastEvs.slice().sort((a, b) => lastP.pos.get(a.id) - lastP.pos.get(b.id));
+  play = { order: order.map(e => e.id), us: order.map(e => lastP.pos.get(e.id)), dur: Math.max(5, +doc.settings.playSeconds || 30), elapsed: 0, last: performance.now(), paused: false, shown: -1 };
+  if (typeof fromK === 'number') { play.elapsed = playTimes()[Math.max(0, Math.min(order.length - 1, fromK))] + 0.001; play.paused = !!paused; }
+  document.body.classList.add('playing');
+  applyPlay(true);
+  requestAnimationFrame(tick);
+}
+function stopPlay() {
+  play = null;
+  document.body.classList.remove('playing', 'paused');
+  stage.classList.remove('playing', 'done');
+  stage.querySelectorAll('.pending').forEach(n => n.classList.remove('pending'));
+  stage.querySelectorAll('.trackline').forEach(pth => { pth.removeAttribute('stroke-dasharray'); pth.removeAttribute('stroke-dashoffset'); });
+  unfocusCards();
+}
+function jump(dir) {
+  if (!play) return;
+  const times = playTimes();
+  const cur = parseInt(play.shown, 10) || 0;
+  const k = Math.max(0, Math.min(times.length - 1, cur - 1 + dir));
+  play.elapsed = times[k] + 0.001;
+  if (dir < 0 && cur <= 1) play.elapsed = 0;
+  applyPlay(true);
+}
+$('btnPlay').onclick = () => startPlay();
+$('pbPause').onclick = () => { if (!play) return; if (play.elapsed >= play.dur) { startPlay(); return; } play.paused = !play.paused; applyPlay(false); };
+$('pbNext').onclick = () => jump(1);
+$('pbPrev').onclick = () => jump(-1);
+$('pbStop').onclick = () => stopPlay();
+$('pbReplay').onclick = () => startPlay();
+document.addEventListener('keydown', e => {
+  if (!play || !document.body.classList.contains('presenting')) return;
+  if (e.key === ' ') { e.preventDefault(); $('pbPause').onclick(); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); jump(1); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); jump(-1); }
+});
+
+/* ---------- orbit: the timeline as a ring seen from eye level (three.js) ---------- */
+const THREE_URL = 'https://unpkg.com/three@0.160.0/build/three.module.js';
+let orbit = null;
+function orbitCardCanvas(e, tr, img) {
+  const S = doc.settings, fam = fontStack(S.font), W = 600, pad = 30, inner = W - pad * 2;
+  const parts = []; let y = pad;
+  if (img) { const ih = Math.round(inner * Math.max(.45, Math.min(1.2, img.naturalHeight / img.naturalWidth))); parts.push({ k: 'img', y, h: ih }); y += ih + 14; }
+  if (S.showCredits && e.credit && img) { const cl = wrap(e.credit, 15, 400, 'normal', fam, inner, 2); parts.push({ k: 'credit', y, lines: cl }); y += cl.length * 19 + 8; }
+  const date = S.showTime && S.showCardDates ? fmtDate(e) : '';
+  if (date) { parts.push({ k: 'date', y: y + 26, s: date }); y += 38; }
+  const title = S.titleCase === 'upper' ? (e.title || '').toUpperCase() : (e.title || '');
+  const tl = wrap(title, 36, 700, 'normal', fam, inner, 3); parts.push({ k: 'title', y, lines: tl }); y += tl.length * 43;
+  if (S.showCaptions && e.caption) { const cl = wrap(e.caption, 25, 400, S.italicCaptions ? 'italic' : 'normal', fam, inner, 6); parts.push({ k: 'cap', y: y + 8, lines: cl }); y += cl.length * 33 + 8; }
+  y += pad;
+  const c = document.createElement('canvas'); c.width = W; c.height = Math.round(y);
+  const g = c.getContext('2d');
+  const r = 22;
+  g.fillStyle = '#ffffff';
+  g.beginPath(); g.roundRect(0, 0, W, c.height, r); g.fill();
+  g.fillStyle = tr.color; g.beginPath(); g.roundRect(0, 0, 10, c.height, [r, 0, 0, r]); g.fill();
+  for (const p of parts) {
+    if (p.k === 'img') {
+      g.save(); g.beginPath(); g.roundRect(pad, p.y, inner, p.h, 12); g.clip();
+      const s = Math.max(inner / img.naturalWidth, p.h / img.naturalHeight), w = img.naturalWidth * s, h = img.naturalHeight * s;
+      g.drawImage(img, pad + (inner - w) / 2, p.y + (p.h - h) / 2, w, h); g.restore();
+    } else if (p.k === 'credit') { g.fillStyle = '#8a8478'; g.font = `400 15px ${fam}`; p.lines.forEach((l, i) => g.fillText(l, pad, p.y + 15 + i * 19)); }
+    else if (p.k === 'date') { g.fillStyle = S.dateInTrackColor ? tr.color : '#2b2a27'; g.font = `700 26px ${fam}`; g.fillText(p.s, pad, p.y); }
+    else if (p.k === 'title') { g.fillStyle = '#2b2a27'; g.font = `${S.boldTitles ? 700 : 400} 36px ${fam}`; p.lines.forEach((l, i) => g.fillText(l, pad, p.y + 36 + i * 43)); }
+    else if (p.k === 'cap') { g.fillStyle = '#4a4740'; g.font = `${S.italicCaptions ? 'italic ' : ''}400 25px ${fam}`; p.lines.forEach((l, i) => g.fillText(l, pad, p.y + 25 + i * 33)); }
+  }
+  return c;
+}
+function textCanvas(str, size, color, weight, family) {
+  const c = document.createElement('canvas'), g = c.getContext('2d');
+  g.font = `${weight} ${size}px ${family}`;
+  c.width = Math.ceil(g.measureText(str).width + size); c.height = Math.ceil(size * 1.5);
+  g.font = `${weight} ${size}px ${family}`; g.fillStyle = color; g.textBaseline = 'middle'; g.textAlign = 'center';
+  g.fillText(str, c.width / 2, c.height / 2);
+  return c;
+}
+function loadImg(src) { return new Promise(res => { if (!src) return res(null); const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }); }
+
+async function startOrbit(from) {
+  from = from && typeof from.k === 'number' ? from : null;
+  if (orbit) return;
+  if (!lastP || !lastEvs.length) { toast('Add some events first'); return; }
+  let THREE;
+  try { THREE = await import(THREE_URL); } catch (err) { toast('Orbit needs an internet connection the first time (it loads three.js).'); return; }
+  const S = doc.settings;
+  const bg = BACKGROUNDS.find(b => b.id === S.bg) || BACKGROUNDS[0];
+  const dark = ['night', 'chalkboard', 'ink'].includes(bg.id);
+  const ink = S.textColor === 'auto' ? bg.ink : S.textColor;
+  const fam = fontStack(S.font), tfam = fontStack(S.titleFont);
+  const tracks = doc.tracks.filter(t => t.on);
+  const evs = lastEvs.slice().sort((a, b) => lastP.pos.get(a.id) - lastP.pos.get(b.id));
+  const N = evs.length;
+
+  // spread close events so neighbors do not sit on top of each other; ruler marks follow the same warp
+  const raw = evs.map(e => lastP.pos.get(e.id));
+  const gapMin = Math.min(0.06, 0.9 / Math.max(1, N));
+  const w = raw.slice();
+  for (let k = 1; k < N; k++) w[k] = Math.max(w[k], w[k - 1] + gapMin);
+  const lo = Math.min(w[0], raw[0]), hi = Math.max(w[N - 1], raw[N - 1]);
+  const norm = w.map(v => (v - lo) / ((hi - lo) || 1) * 0.9 + 0.05);
+  const warp = u => {
+    const xs = [0, ...raw, 1], ys = [0, ...norm, 1];
+    for (let i = 1; i < xs.length; i++) if (u <= xs[i]) return ys[i - 1] + (ys[i] - ys[i - 1]) * ((u - xs[i - 1]) / ((xs[i] - xs[i - 1]) || 1));
+    return 1;
+  };
+  const ARC = Math.PI * 2 * 0.86;
+  const ang = wu => (wu - 0.5) * ARC;
+  const R = Math.max(10, N * 0.9);
+  const K = R / 10; // world scale: bigger rings get bigger cards
+
+  // DOM
+  const host = document.createElement('div'); host.id = 'orbit';
+  host.innerHTML = `<div class="orbit-bar"><button data-o="prev" title="Back (←)">⏮</button><button data-o="pause" title="Pause (Space)">⏸</button><button data-o="next" title="Next (→)">⏭</button><div class="track"><div class="fill"></div></div><span class="count"></span><button data-o="replay" title="Play again">↻</button><button data-o="flat" title="See it as a regular timeline (O)">▬ Flat</button><button data-o="exit" title="Back to editing (Esc)">✎ Edit</button></div>`;
+  document.body.appendChild(host);
+  document.body.classList.add('orbiting');
+  if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  host.prepend(renderer.domElement);
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(bg.c);
+  scene.fog = new THREE.Fog(bg.c, R * 1.2, R * 3.6);
+  const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 500);
+  const ring = new THREE.Group(); scene.add(ring);
+  const lineCol = dark ? mix(bg.c, '#ffffff', .35) : mix(bg.c, '#000000', .25);
+
+  const two = tracks.length === 2;
+  const radiusFor = id => !two ? R : (id === tracks[0].id ? R - 0.7 : R + 0.7);
+  const tex = c => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+  const ptOn = (a, r, y = 0) => new THREE.Vector3(r * Math.sin(a), y, r * Math.cos(a));
+
+  // ring tubes, one per timeline
+  tracks.forEach(tr => {
+    const pts = []; for (let i = 0; i <= 240; i++) pts.push(ptOn(ang(i / 240), radiusFor(tr.id)));
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 480, 0.07, 8, false), new THREE.MeshBasicMaterial({ color: tr.color }));
+    ring.add(tube);
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.6, 16), new THREE.MeshBasicMaterial({ color: tr.color }));
+    const endA = ang(1), endP = ptOn(endA, radiusFor(tr.id));
+    cone.position.copy(endP);
+    cone.lookAt(ptOn(endA + 0.05, radiusFor(tr.id)));
+    cone.rotateX(Math.PI / 2);
+    ring.add(cone);
+  });
+  // ruler marks
+  const ticks = [];
+  if (lastP.mode === 'date') rulerTicks(lastP.t0, lastP.t1).filter(t => t.major).forEach(t => ticks.push({ u: (t.t - lastP.t0) / (lastP.t1 - lastP.t0), label: t.label }));
+  if (S.showTime && S.ruler !== 'none') ticks.forEach(t => {
+    if (t.u < 0 || t.u > 1) return;
+    const a = ang(warp(t.u));
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 10), new THREE.MeshBasicMaterial({ color: lineCol }));
+    dot.position.copy(ptOn(a, R + (two ? 1.5 : 0.75), 0)); ring.add(dot);
+    const c = textCanvas(t.label, 44, dark ? '#e8e2d6' : '#5a554c', 600, fam);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(c), transparent: true, depthWrite: false }));
+    sp.scale.set(c.width / c.height * 0.42, 0.42, 1);
+    sp.position.copy(ptOn(a, R + (two ? 2.2 : 1.45), 0)); ring.add(sp);
+  });
+  // title floats in the middle of the ring, like the planet the moon goes around
+  const head = document.createElement('div'); head.className = 'orbit-head';
+  head.style.color = ink;
+  head.innerHTML = `<div style="font-family:${tfam.replace(/"/g, "'")}" class="t"></div><div style="font-family:${fam.replace(/"/g, "'")}" class="s"></div>`;
+  head.querySelector('.t').textContent = doc.title || '';
+  head.querySelector('.s').textContent = doc.subtitle || '';
+  if (two && S.showLegend) {
+    const lg = document.createElement('div'); lg.className = 'lg'; lg.style.fontFamily = fam;
+    tracks.forEach(tr => { const sp = document.createElement('span'); sp.innerHTML = `<i style="background:${tr.color}"></i>`; sp.append(tr.name); lg.appendChild(sp); });
+    head.appendChild(lg);
+  }
+  host.appendChild(head);
+  // the "now" marker stays at the front while the ring turns under it
+  const now = new THREE.Mesh(new THREE.SphereGeometry(0.26, 24, 24), new THREE.MeshBasicMaterial({ color: '#f2b134', fog: false }));
+  scene.add(now);
+  const halo = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.5, 40), new THREE.MeshBasicMaterial({ color: '#f2b134', transparent: true, opacity: .45, side: THREE.DoubleSide, fog: false }));
+  halo.rotation.x = -Math.PI / 2; scene.add(halo);
+
+  // cards
+  const imgs = await Promise.all(evs.map(e => loadImg(e.image)));
+  const cards = evs.map((e, k) => {
+    const tr = doc.tracks.find(t => t.id === e.track) || tracks[0];
+    const c = orbitCardCanvas(e, tr, imgs[k]);
+    const W = 3.2 * K, H = W * c.height / c.width;
+    const mat = new THREE.MeshBasicMaterial({ map: tex(c), transparent: true, depthWrite: false });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), mat);
+    const a = ang(norm[k]), r = radiusFor(e.track);
+    const below = two && e.track === tracks[1].id;
+    const marker = new THREE.Mesh(new THREE.SphereGeometry(0.17, 16, 16), new THREE.MeshBasicMaterial({ color: tr.color }));
+    marker.position.copy(ptOn(a, r)); ring.add(marker);
+    const stemMat = new THREE.LineBasicMaterial({ color: tr.color, transparent: true });
+    const stem = new THREE.Line(new THREE.BufferGeometry().setFromPoints([ptOn(a, r), ptOn(a, r, 1)]), stemMat);
+    ring.add(stem); ring.add(mesh);
+    return { e, mesh, mat, stem, stemMat, a, r, W, H, below, scale: 0.8 };
+  });
+
+  // timing: hold on each event, glide to the next
+  const dur = Math.max(5, +S.playSeconds || 30), step = dur / N;
+  const k0 = from ? Math.max(0, Math.min(N - 1, from.k)) : 0;
+  const st = { elapsed: from ? k0 * step + step * 0.3 + 0.001 : 0, paused: from ? !!from.paused : false, last: performance.now(), intro: from ? 1.3 : 0, rot: -cards[k0].a, drag: null, raf: 0 };
+  const idxAt = t => Math.min(N - 1, Math.floor(t / step));
+  const targetAngle = t => {
+    const k = idxAt(t), f = (t - k * step) / step;
+    if (k === 0 || f >= 0.3) return cards[k].a;
+    const s = f / 0.3, ease = s * s * (3 - 2 * s);
+    return cards[k - 1].a + (cards[k].a - cards[k - 1].a) * ease;
+  };
+  const bar = host.querySelector('.orbit-bar');
+  const updBar = () => {
+    bar.querySelector('.fill').style.width = (100 * st.elapsed / dur) + '%';
+    bar.querySelector('.count').textContent = `${idxAt(st.elapsed) + 1} / ${N}`;
+    bar.querySelector('[data-o=pause]').textContent = st.paused || st.elapsed >= dur ? '▶' : '⏸';
+    host.classList.toggle('paused', st.paused || st.elapsed >= dur);
+  };
+  const jumpTo = k => { k = Math.max(0, Math.min(N - 1, k)); st.elapsed = k * step + step * 0.3 + 0.001; };
+  const ctl = {
+    prev: () => jumpTo(idxAt(st.elapsed) - 1),
+    next: () => jumpTo(idxAt(st.elapsed) + 1),
+    pause: () => { if (st.elapsed >= dur) { st.elapsed = 0; st.paused = false; } else st.paused = !st.paused; },
+    replay: () => { st.elapsed = 0; st.paused = false; st.intro = 0; },
+    exit: () => stopOrbit(),
+    // same event, same playing or paused state, flat view
+    flat: () => { const k = idxAt(st.elapsed), done = st.elapsed >= dur, paused = st.paused || done; stopOrbit(true); orbitToFlat(k, paused, done); }
+  };
+  bar.querySelectorAll('[data-o]').forEach(b => b.onclick = () => ctl[b.dataset.o]());
+  // drag sideways to scrub through time
+  renderer.domElement.addEventListener('pointerdown', ev => { st.drag = { x: ev.clientX, t: st.elapsed, was: st.paused }; st.paused = true; });
+  const onMove = ev => { if (!st.drag) return; st.elapsed = Math.max(0, Math.min(dur - 0.001, st.drag.t + (ev.clientX - st.drag.x) / window.innerWidth * dur * 0.8)); };
+  const onUp = () => { if (st.drag) { st.paused = st.drag.was; st.drag = null; } };
+  const onKey = ev => {
+    if (ev.key === 'Escape') { ev.preventDefault(); stopOrbit(); }
+    else if (ev.key === ' ') { ev.preventDefault(); ctl.pause(); }
+    else if (ev.key === 'ArrowRight') { ev.preventDefault(); ctl.next(); }
+    else if (ev.key === 'ArrowLeft') { ev.preventDefault(); ctl.prev(); }
+    else if (ev.key === 'o' || ev.key === 'O') { ev.preventDefault(); ctl.flat(); }
+  };
+  const onResize = () => { renderer.setSize(window.innerWidth, window.innerHeight); camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); };
+  const onFs = () => { if (!document.fullscreenElement && orbit) stopOrbit(); };
+  window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp);
+  window.addEventListener('keydown', onKey, true); window.addEventListener('resize', onResize);
+  document.addEventListener('fullscreenchange', onFs);
+
+  const qInv = new THREE.Quaternion(), tmp = new THREE.Vector3();
+  const INTRO = 2.6;
+  function frame(nowMs) {
+    const dt = Math.min(0.1, (nowMs - st.last) / 1000); st.last = nowMs;
+    if (st.intro < INTRO) st.intro += dt;
+    else if (!st.paused && st.elapsed < dur) st.elapsed = Math.min(dur, st.elapsed + dt);
+    // camera starts edge-on (the ring reads as a flat line), then rises until it reads as an ellipse
+    const s = Math.min(1, st.intro / INTRO), e = s * s * (3 - 2 * s);
+    const camY = 0.6 + e * (R * 0.45), camZ = R * 1.85 + 6;
+    camera.position.set(0, camY, camZ);
+    // aim so the ring plus the current card sit in the middle of the screen, however tall the card is
+    const lookY = st.curTop != null ? st.curTop * 0.42 : 2.9 * K;
+    st.look = st.look == null ? lookY : st.look + (lookY - st.look) * Math.min(1, dt * 4);
+    camera.lookAt(0, st.look - e * 0.3 * K, R * 0.4);
+    // turn the ring so the current event sits at the front
+    const want = -targetAngle(st.elapsed);
+    st.rot += (want - st.rot) * Math.min(1, dt * 6);
+    ring.rotation.y = st.rot;
+    now.position.set(0, 0, cards.length && !two ? R : R); halo.position.copy(now.position);
+    halo.scale.setScalar(1 + 0.15 * Math.sin(nowMs / 300));
+    ring.updateMatrixWorld();
+    qInv.copy(ring.quaternion).invert().multiply(camera.quaternion);
+    const cur = idxAt(st.elapsed);
+    const dist = camera.position.distanceTo(tmp.set(0, 0, R));
+    const visH = 2 * Math.tan(camera.fov * Math.PI / 360) * dist, visW = visH * camera.aspect;
+    cards.forEach((c, k) => {
+      const d = Math.atan2(Math.sin(c.a + st.rot), Math.cos(c.a + st.rot)); // 0 = front
+      const isCur = k === cur;
+      // the current card fills about half the screen height or 45% of its width, whichever comes first
+      const fitS = Math.min(0.5 * visH / c.H, 0.45 * visW / c.W, 2.6);
+      const targetS = isCur ? fitS : Math.min(0.7, fitS * 0.4);
+      c.scale += (targetS - c.scale) * Math.min(1, dt * 7);
+      const o = isCur ? 1 : Math.max(0.1, 0.8 - Math.abs(d) / 1.7);
+      c.mat.opacity = o; c.stemMat.opacity = o * 0.8;
+      const h = c.H * c.scale, base = 0.55 * K;
+      if (isCur) st.curTop = base + c.H * targetS;
+      const cy = c.below ? -(base + h / 2) : base + h / 2;
+      c.mesh.scale.setScalar(c.scale);
+      c.mesh.position.copy(ptOn(c.a, c.r, cy));
+      c.mesh.quaternion.copy(qInv);
+      const top = c.below ? -base : base;
+      c.stem.geometry.setFromPoints([ptOn(c.a, c.r), ptOn(c.a, c.r, top)]);
+      c.mesh.getWorldPosition(tmp);
+      c.mesh.renderOrder = isCur ? 1000 : Math.round(-tmp.distanceTo(camera.position) * 10);
+    });
+    updBar();
+    renderer.render(scene, camera);
+    st.raf = requestAnimationFrame(frame);
+  }
+  st.raf = requestAnimationFrame(frame);
+  orbit = { stop() {
+    cancelAnimationFrame(st.raf);
+    window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', onResize);
+    document.removeEventListener('fullscreenchange', onFs);
+    scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
+    renderer.dispose(); host.remove();
+  } };
+}
+function stopOrbit(keepFullscreen) {
+  if (!orbit) return;
+  const o = orbit; orbit = null; o.stop();
+  document.body.classList.remove('orbiting');
+  if (!keepFullscreen && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+  if (!keepFullscreen) render();
+}
+/* switch between the 3D ring and the flat timeline without losing your place */
+function orbitToFlat(k, paused, done) {
+  if (!done) { startPlay(k, paused); return; }
+  $('btnPresent').onclick();
+  const id = lastEvs.slice().sort((a, b) => lastP.pos.get(a.id) - lastP.pos.get(b.id))[k]?.id;
+  const card = id && stage.querySelector(`.card[data-id="${id}"]`);
+  if (card) { card.parentNode.appendChild(card); card.classList.add('focus'); stage.classList.add('focusing'); }
+}
+function flatToOrbit() {
+  let from = null;
+  if (play) {
+    const shown = parseInt(play.shown, 10) || 0;
+    if (play.elapsed < play.dur) from = { k: Math.max(0, shown - 1), paused: play.paused };
+  } else {
+    const f = stage.querySelector('.card.focus');
+    const order = lastEvs.slice().sort((a, b) => lastP.pos.get(a.id) - lastP.pos.get(b.id)).map(e => e.id);
+    if (f) from = { k: Math.max(0, order.indexOf(f.dataset.id)), paused: true };
+  }
+  stopPlay();
+  document.body.classList.remove('presenting'); stage.classList.remove('focusing');
+  startOrbit(from);
+}
+$('presentOrbit').onclick = flatToOrbit;
+document.addEventListener('keydown', e => {
+  if (!document.body.classList.contains('presenting') || orbit) return;
+  if (e.key === 'o' || e.key === 'O') { e.preventDefault(); flatToOrbit(); }
+});
+$('btnOrbit').onclick = () => startOrbit();
+
+const sl = $('starterList');
+STARTERS.forEach(st => { const b = document.createElement('button'); b.textContent = st.name; b.onclick = () => { sl.classList.remove('open'); loadStarter(st); }; sl.appendChild(b); });
+$('btnStarters').onclick = e => { e.stopPropagation(); sl.classList.toggle('open'); };
+document.addEventListener('click', () => sl.classList.remove('open'));
+
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + b.dataset.tab));
+});
+const drop = $('drop');
+drop.onclick = () => $('filePhotos').click();
+$('filePhotos').addEventListener('change', e => { addPhotos(e.target.files); e.target.value = ''; });
+['dragover', 'dragenter'].forEach(t => { drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }); $('stageWrap').addEventListener(t, e => e.preventDefault()); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); addPhotos(e.dataTransfer.files); });
+$('stageWrap').addEventListener('drop', e => { e.preventDefault(); addPhotos(e.dataTransfer.files); });
+/* drag a card along the timeline; its date follows the drop point */
+function svgPoint(ev) {
+  const m = stage.getScreenCTM(); if (!m) return null;
+  const pt = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(m.inverse());
+  return pt;
+}
+function nearestU(pt) {
+  const pts = lastPath.pts; let best = 0, bd = Infinity;
+  for (let i = 0; i < pts.length; i++) { const d = (pts[i].x - pt.x) ** 2 + (pts[i].y - pt.y) ** 2; if (d < bd) { bd = d; best = i; } }
+  return pts.length > 1 ? best / (pts.length - 1) : 0.5;
+}
+function setEventTime(e, t) {
+  if (e.precision === 'none') e.precision = 'year';
+  if (e.precision === 'year') { e.y = Math.round(t); return; }
+  if (e.precision === 'month') { const mi = Math.round(t * 12); e.y = Math.floor(mi / 12); e.m = mi - e.y * 12 + 1; return; }
+  const di = Math.round(t * 372), y = Math.floor(di / 372), rem = di - y * 372, m = Math.min(11, Math.floor(rem / 31));
+  const dim = new Date(y, m + 1, 0).getDate();
+  e.y = y; e.m = m + 1; e.d = Math.min(dim, rem - m * 31 + 1);
+}
+function dateForU(e, u) {
+  if (lastP.mode === 'date') return drag.frozen.t0 + u * (drag.frozen.t1 - drag.frozen.t0);
+  // even spacing: interpolate between the dated neighbors on either side of the drop point
+  const others = lastEvs.filter(x => x.id !== e.id && tval(x) != null).map(x => ({ u: drag.startPos.get(x.id), t: tval(x) })).sort((a, b) => a.u - b.u);
+  const before = others.filter(o => o.u <= u).pop(), after = others.find(o => o.u > u);
+  if (before && after) return before.t + (after.t - before.t) * (u - before.u) / ((after.u - before.u) || 1);
+  if (before) return before.t + (others.length > 1 ? (others[others.length - 1].t - others[0].t) / others.length : 1) * 0.5;
+  if (after) return after.t - (others.length > 1 ? (others[others.length - 1].t - others[0].t) / others.length : 1) * 0.5;
+  return null;
+}
+const dragTip = document.createElement('div');
+dragTip.style.cssText = 'position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);padding:4px 10px;border-radius:6px;font-weight:600;display:none;z-index:30';
+document.body.appendChild(dragTip);
+let suppressClick = false;
+stage.addEventListener('pointerdown', ev => {
+  if (document.body.classList.contains('presenting') || ev.button !== 0) return;
+  const g = ev.target.closest('.card'); if (!g || !lastP) return;
+  const e = doc.events.find(x => x.id === g.dataset.id); if (!e) return;
+  drag = { id: e.id, x: ev.clientX, y: ev.clientY, moved: false, u: null, startPos: new Map(lastP.pos),
+           frozen: lastP.mode === 'date' ? { t0: lastP.t0, t1: lastP.t1 } : null };
+  ev.preventDefault();
+});
+window.addEventListener('pointermove', ev => {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 5) return;
+  drag.moved = true; selectedId = drag.id;
+  const pt = svgPoint(ev); if (!pt) return;
+  const e = doc.events.find(x => x.id === drag.id);
+  const u = Math.max(0, Math.min(1, nearestU(pt)));
+  drag.u = u;
+  const t = dateForU(e, u);
+  if (t != null) setEventTime(e, t);
+  dragTip.textContent = (t != null ? fmtDate(Object.assign({}, e, { dateLabel: '' })) : 'Move') + (e.dateLabel ? `  (shows "${e.dateLabel}")` : '');
+  dragTip.style.left = ev.clientX + 14 + 'px'; dragTip.style.top = ev.clientY + 14 + 'px'; dragTip.style.display = 'block';
+  stage.style.cursor = 'grabbing';
+  changed();
+});
+window.addEventListener('pointerup', () => {
+  if (!drag) return;
+  const was = drag; drag = null;
+  dragTip.style.display = 'none'; stage.style.cursor = '';
+  if (!was.moved) return;
+  suppressClick = true; setTimeout(() => { suppressClick = false; }, 50);
+  if (lastP.mode === 'even' && tval(doc.events.find(x => x.id === was.id)) == null) {
+    // nothing to date against: just move it in the list to where it was dropped
+    const e = doc.events.find(x => x.id === was.id);
+    doc.events.splice(doc.events.indexOf(e), 1);
+    const after = lastEvs.filter(x => x.id !== e.id && was.startPos.get(x.id) < was.u).pop();
+    doc.events.splice(after ? doc.events.indexOf(after) + 1 : 0, 0, e);
+  } else sortEvents();
+  changed(true);
+  const e = doc.events.find(x => x.id === was.id);
+  toast(`${e.title || 'Event'} moved to ${fmtDate(Object.assign({}, e, { dateLabel: '' })) || 'a new spot'}`);
+});
+stage.addEventListener('click', e => {
+  if (suppressClick) return;
+  const g = e.target.closest('.card');
+  if (document.body.classList.contains('presenting')) {
+    const was = g && g.classList.contains('focus');
+    unfocusCards();
+    if (g && !was) { g.parentNode.appendChild(g); g.classList.add('focus'); stage.classList.add('focusing'); }
+    return;
+  }
+  if (!g) return;
+  selectedId = g.dataset.id;
+  document.querySelector('.tabs button[data-tab=events]').click();
+  renderList(); changed();
+  const n = document.querySelector(`.ev[data-id="${selectedId}"]`); if (n) n.scrollIntoView({ block: 'nearest' });
+});
+
+/* ---------- boot ---------- */
+window.timelineMaker = { get doc() { return doc; }, changed, syncControls };
+(function boot() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (err) { saved = null; }
+  const want = new URLSearchParams(location.search).get('starter');
+  if (want) { const st = STARTERS.find(s => s.id === want); if (st) { syncControls(); renderList(); render(); loadStarter(st); return; } }
+  if (saved && saved.events) loadDoc(saved);
+  else { syncControls(); renderList(); render(); }
+})();
+</script>
+</body>
+</html>
