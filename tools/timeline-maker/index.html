@@ -356,6 +356,13 @@ const STARTERS = [
   { id: 'blank', name: 'Blank timeline' }
 ];
 
+// an event on track 'both' belongs to both timelines: it sits between the two lines with a bridge across them
+const BOTH = 'both';
+function trackFor(e, tracks) {
+  if (e.track !== BOTH) return doc.tracks.find(t => t.id === e.track) || tracks[0] || doc.tracks[0];
+  if (tracks.length < 2) return tracks[0] || doc.tracks[0];
+  return { id: BOTH, name: 'Both', color: mix(tracks[0].color, tracks[1].color, .5) };
+}
 function uid() { return Math.random().toString(36).slice(2, 10); }
 function defaultSettings() {
   return {
@@ -682,7 +689,7 @@ function render() {
   const fam = fontStack(S.font), tfam = fontStack(S.titleFont);
   const tracks = doc.tracks.filter(t => t.on);
   const trackIds = new Set(tracks.map(t => t.id));
-  const evs = doc.events.filter(e => trackIds.has(e.track));
+  const evs = doc.events.filter(e => trackIds.has(e.track) || e.track === BOTH);
   while (stage.firstChild) stage.removeChild(stage.firstChild);
   const defs = el('defs', {}, stage);
   const bgRect = el('rect', { fill: bg.c }, stage);
@@ -692,7 +699,7 @@ function render() {
   const lw = +S.lineWidth;
   const two = tracks.length === 2;
   const gap = two ? Math.max(70, lw * 6) : 0;
-  const trackOff = id => !two ? 0 : (id === tracks[0].id ? -gap / 2 : gap / 2);
+  const trackOff = id => !two || id === BOTH ? 0 : (id === tracks[0].id ? -gap / 2 : gap / 2);
   const P = positions(evs);
   lastPath = path; lastP = P; lastEvs = evs;
   const lineCol = dark ? mix(bg.c, '#ffffff', .35) : mix(bg.c, '#000000', .25);
@@ -778,17 +785,25 @@ function render() {
   const cw = +S.cardSize;
   const ls = +S.labelSize;
   const outward = S.shape === 'circle' || S.shape === 'spiral';
+  let sharedK = 0;
   sorted.forEach((e, k) => {
-    const tr = doc.tracks.find(t => t.id === e.track);
+    const tr = trackFor(e, tracks);
+    const shared = two && e.track === BOTH;
     const u = P.pos.get(e.id);
     const p = path.at(u, trackOff(e.track));
-    let side = two ? Math.sign(trackOff(e.track)) : (outward ? -1 : (k % 2 ? 1 : -1));
+    let side = shared ? (sharedK++ % 2 ? 1 : -1) : two ? Math.sign(trackOff(e.track)) : (outward ? -1 : (k % 2 ? 1 : -1));
     if (S.shape === 'arc' && !two) side = -1;
     const card = buildCard(e, tr, { cw, ls, fam, ink, bg, k });
     const box = placeCard(p, side, card, !two && !outward && S.shape !== 'arc', two ? gap / 2 + rlw / 2 + 8 : rlw * (candy ? .5 : 2) + (candy ? 10 : 0));
     placed.push(box);
     el('line', { x1: p.x, y1: p.y, x2: box.ax, y2: box.ay, stroke: tr.color, 'stroke-width': 2, 'stroke-dasharray': S.cardStyle === 'plain' ? '4 4' : null, opacity: .8, class: 'ld', 'data-id': e.id }, leadersG);
-    markerShape(el('g', { class: 'mk', 'data-id': e.id }, markersG), p.x, p.y, Math.max(7, lw * 1.25), S.marker, tr.color, bg.c);
+    if (shared) {
+      // a bridge across both lines, with each timeline's own marker at either end
+      const mg = el('g', { class: 'mk', 'data-id': e.id }, markersG), pa = path.at(u, -gap / 2), pb = path.at(u, gap / 2);
+      el('line', { x1: pa.x, y1: pa.y, x2: pb.x, y2: pb.y, stroke: tr.color, 'stroke-width': Math.max(5, lw), 'stroke-linecap': 'round' }, mg);
+      markerShape(el('g', {}, mg), pa.x, pa.y, Math.max(7, lw * 1.25), S.marker, tracks[0].color, bg.c);
+      markerShape(el('g', {}, mg), pb.x, pb.y, Math.max(7, lw * 1.25), S.marker, tracks[1].color, bg.c);
+    } else markerShape(el('g', { class: 'mk', 'data-id': e.id }, markersG), p.x, p.y, Math.max(7, lw * 1.25), S.marker, tr.color, bg.c);
     card.g.setAttribute('transform', `translate(${box.x.toFixed(1)} ${box.y.toFixed(1)})` + (card.rot ? ` rotate(${card.rot} ${card.w / 2} ${card.h / 2})` : ''));
     const inner = document.createElementNS(SVGNS, 'g'); inner.setAttribute('class', 'zoomable');
     while (card.g.firstChild) inner.appendChild(card.g.firstChild);
@@ -818,7 +833,8 @@ function render() {
   if (legend) {
     y += ls * 1.4;
     mctx.font = `600 ${ls}px ${fam}`;
-    const items = tracks.map(t => ({ t, w: mctx.measureText(t.name).width + ls * 2.2 }));
+    const legendTracks = evs.some(e => e.track === BOTH) ? [...tracks, trackFor({ track: BOTH }, tracks)] : tracks;
+    const items = legendTracks.map(t => ({ t, w: mctx.measureText(t.name).width + ls * 2.2 }));
     const tw = items.reduce((s, i) => s + i.w, 0) + (items.length - 1) * ls * 1.5;
     let x = cx - tw / 2;
     items.forEach(i => {
@@ -1325,7 +1341,7 @@ function renderList() {
   const two = doc.tracks[1].on;
   if (!doc.events.length) { box.innerHTML = '<p class="hint">No events yet.</p>'; return; }
   doc.events.forEach((e, i) => {
-    const tr = doc.tracks.find(t => t.id === e.track) || doc.tracks[0];
+    const tr = trackFor(e, doc.tracks.filter(t => t.on));
     const d = document.createElement('div'); d.className = 'ev' + (e.id === selectedId ? ' sel' : ''); d.dataset.id = e.id;
     const dateTxt = fmtDate(e) || 'No date';
     d.innerHTML = `
@@ -1346,7 +1362,7 @@ function renderList() {
           <input type="number" data-k="d" min="1" max="31" value="${esc(e.d)}" title="Day">
         </div>
         <div class="field"><label>Custom date text (optional)</label><input type="text" data-k="dateLabel" value="${esc(e.dateLabel)}" placeholder='e.g. "Late 1800s" or "My first week"'></div>
-        ${two ? `<div class="field"><label>Timeline</label><select data-k="track">${doc.tracks.map(t => `<option value="${t.id}" ${t.id === e.track ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>` : ''}
+        ${two ? `<div class="field"><label>Timeline</label><select data-k="track">${doc.tracks.map(t => `<option value="${t.id}" ${t.id === e.track ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}<option value="${BOTH}" ${e.track === BOTH ? 'selected' : ''}>Both timelines</option></select></div>` : ''}
         <div class="field"><label>Photo credit</label><input type="text" data-k="credit" value="${esc(e.credit)}" placeholder="Who took it, the license, where it came from"></div>
         ${e.note ? `<p class="hint">Note: ${esc(e.note)}</p>` : ''}
         <div class="ev-tools">
@@ -1689,7 +1705,7 @@ async function startOrbit(from) {
   const lineCol = dark ? mix(bg.c, '#ffffff', .35) : mix(bg.c, '#000000', .25);
 
   const two = tracks.length === 2;
-  const radiusFor = id => !two ? R : (id === tracks[0].id ? R - 0.7 : R + 0.7);
+  const radiusFor = id => !two || id === BOTH ? R : (id === tracks[0].id ? R - 0.7 : R + 0.7);
   const tex = c => { const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
   const ptOn = (a, r, y = 0) => new THREE.Vector3(r * Math.sin(a), y, r * Math.cos(a));
 
@@ -1739,7 +1755,7 @@ async function startOrbit(from) {
   // cards
   const imgs = await Promise.all(evs.map(e => loadImg(e.image)));
   const cards = evs.map((e, k) => {
-    const tr = doc.tracks.find(t => t.id === e.track) || tracks[0];
+    const tr = trackFor(e, tracks);
     const c = orbitCardCanvas(e, tr, imgs[k]);
     const W = 3.2 * K, H = W * c.height / c.width;
     const mat = new THREE.MeshBasicMaterial({ map: tex(c), transparent: true, depthWrite: false });
