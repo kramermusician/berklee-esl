@@ -86,8 +86,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
 #exitPresent:hover, #exitPresent:focus { opacity: 1; }
 body.presenting #exitPresent { display: block; }
 #stage .zoomable { transform-box: fill-box; transform-origin: center; transition: transform .25s ease, opacity .25s ease; }
-#stage .card.focus .zoomable { transform: scale(1.55); }
-#stage.focusing .card:not(.focus) .zoomable { opacity: .35; }
+#stage.focusing .card:not(.focus) .zoomable { opacity: .3; }
 body.presenting #stage .card { cursor: zoom-in; }
 body.presenting #stage .card.focus { cursor: zoom-out; }
 .play-set { display: inline-flex; gap: 4px; align-items: center; }
@@ -124,6 +123,25 @@ body.presenting #presentOrbit { display: block; }
 body.presenting header, body.presenting aside, body.presenting .zoombar { display: none; }
 body.presenting #stageWrap { background: #000; display: flex; align-items: center; justify-content: center; }
 body.presenting #stage { margin: 0; box-shadow: none; max-width: 100vw; max-height: 100vh; width: auto !important; height: auto !important; }
+.looks { display: flex; flex-wrap: wrap; gap: 6px; }
+.look { border: 1px solid var(--line); border-radius: 8px; padding: 0; cursor: pointer; width: 72px; overflow: hidden; background: var(--field); font-size: 11px; color: var(--muted); }
+.look .pv { height: 34px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+.look span { display: block; padding: 3px 0 4px; }
+.look:hover { border-color: var(--accent); }
+.field input[type=range] { width: 100%; }
+.range-row { display: flex; gap: 8px; align-items: center; }
+.range-row input { flex: 1; }
+.range-row output { font-size: 12px; color: var(--muted); min-width: 34px; text-align: right; }
+#playBar button.on { color: #f2b134; }
+#presentHelp { display: none; position: fixed; top: 60px; right: 14px; z-index: 21; background: rgba(20,20,20,.88); color: #fff; border-radius: 10px; padding: 12px 16px; font-size: 14px; line-height: 1.6; max-width: 300px; }
+#presentHelp.open { display: block; }
+#presentHelp b { color: #f2b134; font-weight: 600; }
+#presentKeys { display: none; position: fixed; top: 14px; right: 194px; z-index: 20; opacity: .35; transition: opacity .2s; }
+#presentKeys:hover, #presentKeys:focus { opacity: 1; }
+body.presenting #presentKeys { display: block; }
+body.presenting #stageWrap { overflow: hidden; }
+body.presenting #stage { cursor: grab; }
+body.presenting.panning #stage { cursor: grabbing; }
 .menu { position: relative; }
 .menu-list { position: absolute; top: 110%; left: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); min-width: 220px; z-index: 5; display: none; padding: 4px; }
 .menu-list.open { display: block; }
@@ -183,6 +201,8 @@ body.presenting #stage { margin: 0; box-shadow: none; max-width: 100vw; max-heig
     </div>
 
     <div class="pane" id="pane-style">
+      <div class="field"><span class="group-label">Looks</span><div class="looks" id="lookChips"></div>
+        <p class="hint">A look sets the background, fonts, cards and board colors at once. Change any single thing after.</p></div>
       <div class="field"><span class="group-label">Shape</span><div class="chips" id="shapeChips"></div></div>
       <div class="field" id="candyField"><span class="group-label">Board colors</span>
         <div class="chips" id="candyChips"></div>
@@ -207,9 +227,11 @@ body.presenting #stage { margin: 0; box-shadow: none; max-width: 100vw; max-heig
         <select id="dateFormat"><option value="long">August 10, 1920</option><option value="short">Aug 10, 1920</option><option value="numeric">1920-08-10</option></select></div>
       <hr>
       <div class="field"><span class="group-label">Cards</span><div class="chips" id="cardChips"></div></div>
+      <div class="field"><label>Card width</label><div class="range-row"><input type="range" id="cardSize" min="160" max="420" step="10"><output for="cardSize" id="cardSizeOut"></output></div>
+        <p class="hint">The board grows with the cards, so wider cards mean bigger, easier text on screen.</p></div>
       <div class="row">
-        <div class="field"><label>Card size</label>
-          <select id="cardSize"><option value="180">Small</option><option value="240">Medium</option><option value="310">Large</option></select></div>
+        <div class="field"><label>Photo shape</label>
+          <select id="photoShape"><option value="natural">Natural</option><option value="square">Square</option><option value="wide">Wide</option><option value="round">Round</option></select></div>
         <div class="field"><label>Marker</label>
           <select id="marker"><option value="dot">Dot</option><option value="diamond">Diamond</option><option value="square">Square</option><option value="star">Star</option><option value="ring">Ring</option></select></div>
       </div>
@@ -217,17 +239,18 @@ body.presenting #stage { margin: 0; box-shadow: none; max-width: 100vw; max-heig
       <label class="check"><input type="checkbox" id="showCaptions"> Show captions</label>
       <label class="check"><input type="checkbox" id="showCredits"> Show photo credits</label>
       <hr>
-      <div class="field"><span class="group-label">Background</span><div class="swatches" id="bgSwatches"></div></div>
+      <div class="field"><span class="group-label">Background</span><div class="swatches" id="bgSwatches"><input type="color" id="bgCustom" title="Any color" value="#faf6ee"></div></div>
     </div>
 
     <div class="pane" id="pane-text">
       <div class="field"><label>Font</label><select id="font"></select></div>
       <div class="field"><label>Title font</label><select id="titleFont"></select></div>
-      <div class="field"><label>Title size</label><input type="range" id="titleSize" min="28" max="96" step="2"></div>
-      <div class="field"><label>Label size</label><input type="range" id="labelSize" min="11" max="30" step="1"></div>
+      <div class="field"><label>Title size</label><div class="range-row"><input type="range" id="titleSize" min="28" max="120" step="2"><output id="titleSizeOut"></output></div></div>
+      <div class="field"><label>Card text size</label><div class="range-row"><input type="range" id="labelSize" min="11" max="40" step="1"><output id="labelSizeOut"></output></div>
+        <p class="hint" id="readHint"></p></div>
       <div class="field"><label>Event titles</label>
         <select id="titleCase"><option value="none">As typed</option><option value="upper">ALL CAPS</option></select></div>
-      <div class="field"><label>Text color</label><div class="swatches" id="textSwatches"></div></div>
+      <div class="field"><label>Text color</label><div class="swatches" id="textSwatches"><input type="color" id="textCustom" title="Any color" value="#2b2a27"></div></div>
       <label class="check"><input type="checkbox" id="boldTitles"> Bold event titles</label>
       <label class="check"><input type="checkbox" id="italicCaptions"> Italic captions</label>
       <label class="check"><input type="checkbox" id="dateInTrackColor"> Dates in the timeline's color</label>
@@ -241,7 +264,15 @@ body.presenting #stage { margin: 0; box-shadow: none; max-width: 100vw; max-heig
 </main>
 <button class="btn" id="exitPresent" title="Back to editing (Esc)">✎ Edit</button>
 <button class="btn" id="presentOrbit" title="See it as a 3D ring (O)">🪐 Orbit</button>
-<div id="playBar"><button id="pbPrev" title="Back (←)">⏮</button><button id="pbPause" title="Pause (Space)">⏸</button><button id="pbNext" title="Next (→)">⏭</button><div class="track"><div class="fill" id="pbFill"></div></div><span class="count" id="pbCount"></span><button id="pbStop" title="Stop and show everything">■</button><button id="pbReplay" title="Play again">↻</button></div>
+<button class="btn" id="presentKeys" title="Keys and tips (?)">?</button>
+<div id="presentHelp">
+  <b>Click</b> a card to zoom in, click again or Esc to zoom out<br>
+  <b>Scroll</b> to zoom, <b>drag</b> to move, <b>0</b> to fit the screen<br>
+  <b>Space</b> play or pause, <b>←</b> <b>→</b> step<br>
+  <b>F</b> follow the current event while playing<br>
+  <b>O</b> orbit view, <b>Esc</b> back to editing
+</div>
+<div id="playBar"><button id="pbPrev" title="Back (←)">⏮</button><button id="pbPause" title="Pause (Space)">⏸</button><button id="pbNext" title="Next (→)">⏭</button><div class="track"><div class="fill" id="pbFill"></div></div><span class="count" id="pbCount"></span><button id="pbFollow" title="Follow: zoom in on each event as it appears (F)">🔍</button><button id="pbStop" title="Stop and show everything">■</button><button id="pbReplay" title="Play again">↻</button></div>
 <div id="toast"></div>
 
 <script>
@@ -271,6 +302,22 @@ const BACKGROUNDS = [
 ];
 const TRACK_COLORS = ['#c8553d', '#2a6f97', '#7d9a72', '#d9a441', '#8a5a9e', '#3d3d3d', '#e07a9a', '#1f8a70'];
 const TEXT_COLORS = ['auto', '#2b2a27', '#ffffff', '#c8553d', '#2a6f97', '#3b5a35', '#6b3fa0'];
+// one-click looks: each sets background, fonts, cards and board colors together
+const LOOKS = [
+  { id: 'notebook', name: 'Notebook', pv: { bg: '#faf6ee', ink: '#2b2a27', font: 'Georgia, serif' }, s: { bg: 'paper', font: 'georgia', titleFont: 'typewriter', cardStyle: 'polaroid', ruler: 'bands', candyPalette: 'pastel', textColor: 'auto', boldTitles: true, italicCaptions: true } },
+  { id: 'clean', name: 'Clean', pv: { bg: '#ffffff', ink: '#222222', font: "'Avenir Next', Helvetica, sans-serif" }, s: { bg: 'white', font: 'avenir', titleFont: 'avenir', cardStyle: 'card', ruler: 'ticks', candyPalette: 'classic', textColor: 'auto', boldTitles: true, italicCaptions: false } },
+  { id: 'poster', name: 'Poster', pv: { bg: '#f6e6e0', ink: '#3a2420', font: "Futura, 'Century Gothic', sans-serif" }, s: { bg: 'blush', font: 'futura', titleFont: 'impact', cardStyle: 'bubble', ruler: 'pills', candyPalette: 'sunset', textColor: 'auto', boldTitles: true, italicCaptions: false, titleCase: 'upper' } },
+  { id: 'chalk', name: 'Chalk', pv: { bg: '#2f3b33', ink: '#f3f0e6', font: "'Chalkboard SE', cursive" }, s: { bg: 'chalkboard', font: 'chalk', titleFont: 'chalk', cardStyle: 'plain', ruler: 'dots', candyPalette: 'pastel', textColor: 'auto', boldTitles: true, italicCaptions: false } },
+  { id: 'night', name: 'Night', pv: { bg: '#1d2230', ink: '#f1ece2', font: "'Avenir Next', Helvetica, sans-serif" }, s: { bg: 'night', font: 'avenir', titleFont: 'avenir', cardStyle: 'polaroid', ruler: 'pills', candyPalette: 'ocean', textColor: 'auto', boldTitles: true, italicCaptions: false } },
+  { id: 'museum', name: 'Museum', pv: { bg: '#e6ece0', ink: '#24302a', font: 'Baskerville, Georgia, serif' }, s: { bg: 'sage', font: 'baskerville', titleFont: 'baskerville', cardStyle: 'card', ruler: 'bands', candyPalette: 'forest', textColor: 'auto', boldTitles: false, italicCaptions: true } }
+];
+function luma(hex) { const p = i => parseInt(hex.slice(i, i + 2), 16) / 255; return 0.2126 * p(1) + 0.7152 * p(3) + 0.0722 * p(5); }
+function currentBg() {
+  const S = doc.settings;
+  if (S.bg === 'custom' && /^#[0-9a-f]{6}$/i.test(S.bgCustom || '')) return { id: 'custom', c: S.bgCustom, ink: luma(S.bgCustom) < 0.45 ? '#f1ece2' : '#2b2a27' };
+  return BACKGROUNDS.find(b => b.id === S.bg) || BACKGROUNDS[0];
+}
+function isDarkBg(bg) { return luma(bg.c) < 0.45; }
 
 const SHAPES = [
   { id: 'line', name: 'Line' }, { id: 'vline', name: 'Tall' }, { id: 'wave', name: 'Wave' },
@@ -316,7 +363,8 @@ function defaultSettings() {
     showTime: true, showCardDates: true, dateFormat: 'short', cardStyle: 'card', cardSize: 240,
     marker: 'dot', lineWidth: 6, showCaptions: true, showCredits: true, bg: 'paper',
     font: 'avenir', titleFont: 'avenir', titleSize: 52, labelSize: 16, textColor: 'auto',
-    titleCase: 'none', candyPalette: 'classic', candyCustom: null, boldTitles: true, italicCaptions: false, dateInTrackColor: true, showLegend: true, playSeconds: 30
+    titleCase: 'none', candyPalette: 'classic', candyCustom: null, boldTitles: true, italicCaptions: false, dateInTrackColor: true, showLegend: true, playSeconds: 30,
+    photoShape: 'natural', bgCustom: null, follow: true
   };
 }
 function newDoc() {
@@ -358,20 +406,35 @@ function fmtDate(e) {
 }
 
 /* ---------- shapes: dense polylines in a local box ---------- */
-function shapePoints(id, n) {
+// rows for a snake or board: the count that makes the whole thing closest to a screen shape (16:9)
+function boardRows(count, slot, gap, cardH) {
+  let best = 2, bd = Infinity;
+  for (let rows = 2; rows <= 8; rows++) {
+    const W = Math.max(1400, Math.ceil(count / rows) * slot), H = (rows - 1) * gap + cardH * 2.2;
+    const d = Math.abs(W / H - 16 / 9);
+    if (d < bd) { bd = d; best = rows; }
+  }
+  return count <= 6 ? 2 : best;
+}
+function shapePoints(id, n, cw) {
   const P = [];
   const push = (x, y) => P.push({ x, y });
   const count = Math.max(n, 1);
-  if (id === 'line') { for (let i = 0; i <= 200; i++) push(i / 200 * Math.max(1500, count * 190), 0); }
-  else if (id === 'vline') { for (let i = 0; i <= 200; i++) push(0, i / 200 * Math.max(1300, count * 170)); }
+  cw = cw || 240;
+  // cards alternate sides of the line, so two events share one card width plus a little air
+  const slot = cw * 0.62 + 30, cardH = cw * 1.1;
+  // dated spacing bunches events, so the open shapes get more room per event than the boards do
+  const open = Math.max(1600, count * cw * 0.85);
+  if (id === 'line') { for (let i = 0; i <= 200; i++) push(i / 200 * open, 0); }
+  else if (id === 'vline') { for (let i = 0; i <= 200; i++) push(0, i / 200 * Math.max(1300, count * cw * 0.7)); }
   else if (id === 'wave') {
-    const W = Math.max(1600, count * 190);
+    const W = open;
     for (let i = 0; i <= 600; i++) { const u = i / 600; push(u * W, 150 * Math.sin(u * Math.PI * 2 * Math.max(2, Math.round(W / 800)))); }
   } else if (id === 'zigzag') {
-    const W = Math.max(1600, count * 190), k = Math.max(4, Math.round(W / 400));
+    const W = open, k = Math.max(4, Math.round(W / 400));
     for (let i = 0; i <= k; i++) push(i / k * W, i % 2 ? -150 : 150);
   } else if (id === 'snake') {
-    const rows = count > 14 ? 4 : count > 6 ? 3 : 2, L = 1500, gap = 520, r = gap / 2;
+    const gap = Math.round(cardH * 1.5 + 60), rows = boardRows(count, slot, gap, cardH), L = Math.max(1400, Math.ceil(count / rows) * slot), r = gap / 2;
     for (let row = 0; row < rows; row++) {
       const y = row * gap, ltr = row % 2 === 0;
       for (let i = 0; i <= 100; i++) push(ltr ? i / 100 * L : L - i / 100 * L, y);
@@ -395,11 +458,12 @@ function shapePoints(id, n) {
     for (let i = 0; i <= 500; i++) { const a = -Math.PI / 2 + i / 500 * Math.PI * 2 * 0.94; push(R * Math.cos(a), R * Math.sin(a)); }
   } else if (id === 'candy') {
     // board-game map: wavy rows that fill a screen-shaped board, joined by round U-turns
-    const rows = Math.max(3, Math.ceil(Math.sqrt(count / 3))), L = Math.max(2000, Math.ceil(count * 210 / rows)), gap = 560, r = gap / 2;
-    const waves = Math.max(2, Math.round(L / 700));
+    // the row gap grows with the cards so every row has room for a card above and below the tiles
+    const gap = Math.round(cardH * 1.45 + 110), rows = Math.max(3, boardRows(count, slot, gap, cardH)), L = Math.max(1500, Math.ceil(count / rows) * slot), r = gap / 2;
+    const waves = Math.max(2, Math.round(L / 700)), amp = Math.round(gap * 0.11);
     for (let row = 0; row < rows; row++) {
       const y = row * gap, ltr = row % 2 === 0;
-      for (let i = 0; i <= 300; i++) { const u = i / 300, x = ltr ? u * L : L - u * L; push(x, y + 70 * Math.sin(u * Math.PI * 2 * waves)); }
+      for (let i = 0; i <= 300; i++) { const u = i / 300, x = ltr ? u * L : L - u * L; push(x, y + amp * Math.sin(u * Math.PI * 2 * waves)); }
       if (row < rows - 1) {
         const cx = ltr ? L : 0;
         for (let i = 1; i < 60; i++) { const a = -Math.PI / 2 + i / 60 * Math.PI; push(cx + (ltr ? 1 : -1) * r * 1.2 * Math.cos(a), y + r + r * Math.sin(a)); }
@@ -527,6 +591,35 @@ function rulerTicks(t0, t1) {
   return ticks;
 }
 
+// even spacing: a label only where the year (or decade) changes, so the ruler reads as chapters, not a copy of every card date
+function evenTicks(evs, P) {
+  const S = doc.settings, out = [];
+  const dated = evs.filter(e => tval(e) != null).map(e => ({ u: P.pos.get(e.id), e, y: Math.floor(tval(e)) })).sort((a, b) => a.u - b.u);
+  if (!dated.length) {
+    // no dates anywhere: fall back to each event's custom date text, if it has one
+    evs.forEach(e => { if (e.dateLabel && e.dateLabel.trim()) out.push({ u: P.pos.get(e.id), label: e.dateLabel.trim(), major: true }); });
+    return out;
+  }
+  const span = dated[dated.length - 1].y - dated[0].y;
+  const dens = S.rulerDensity;
+  let unit = span > 60 ? 10 : 1;
+  if (dens === 'sparse' && span > 15) unit = 10;
+  if (dens === 'dense') unit = 1;
+  const seen = new Set();
+  dated.forEach(d => {
+    const key = Math.floor(d.y / unit) * unit;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const lab = S.rulerLabels;
+    let label = yearStr(key);
+    if (unit >= 10 && lab === 'decade') label = (key < 0 ? yearStr(key) : String(key)) + 's';
+    else if (lab === 'compact' && key >= 0) label = "'" + String(key % 100).padStart(2, '0');
+    else if (unit >= 10 && lab !== 'decade') label = yearStr(d.y);
+    out.push({ u: d.u, label, major: true });
+  });
+  return out;
+}
+
 /* ---------- text measuring ---------- */
 const mctx = document.createElement('canvas').getContext('2d');
 function fontStack(id) { return (FONTS.find(f => f.id === id) || FONTS[0]).stack; }
@@ -583,9 +676,9 @@ function markerShape(g, x, y, r, kind, color, bg) {
 const stage = document.getElementById('stage');
 function render() {
   const S = doc.settings;
-  const bg = BACKGROUNDS.find(b => b.id === S.bg) || BACKGROUNDS[0];
+  const bg = currentBg();
   const ink = S.textColor === 'auto' ? bg.ink : S.textColor;
-  const dark = ['night', 'chalkboard', 'ink'].includes(bg.id);
+  const dark = isDarkBg(bg);
   const fam = fontStack(S.font), tfam = fontStack(S.titleFont);
   const tracks = doc.tracks.filter(t => t.on);
   const trackIds = new Set(tracks.map(t => t.id));
@@ -595,7 +688,7 @@ function render() {
   const bgRect = el('rect', { fill: bg.c }, stage);
   const content = el('g', {}, stage);
 
-  const path = makePath(shapePoints(S.shape, evs.length));
+  const path = makePath(shapePoints(S.shape, evs.length, +S.cardSize));
   const lw = +S.lineWidth;
   const two = tracks.length === 2;
   const gap = two ? Math.max(70, lw * 6) : 0;
@@ -612,20 +705,22 @@ function render() {
   const showTime = S.showTime;
   const tickList = [];
   if (P.mode === 'date') rulerTicks(P.t0, P.t1).forEach(t => tickList.push({ u: (t.t - P.t0) / (P.t1 - P.t0), label: t.label, major: t.major }));
-  else evs.forEach(e => { const s = fmtDate(e); if (s) tickList.push({ u: P.pos.get(e.id), label: s, major: true }); });
+  else evenTicks(evs, P).forEach(t => tickList.push(t));
   const majors = tickList.filter(t => t.major).sort((a, b) => a.u - b.u);
   const labelSide = two ? 0 : (S.shape === 'vline' ? -1 : 1);
-  const rlab = Math.round(S.labelSize * 0.9);
+  // on the board the tiles are the ruler, so the year tags are bigger and sit clear of the tiles
+  const rlab = candy ? Math.max(Math.round(S.labelSize * 0.9), Math.round(tileH * 0.34)) : Math.round(S.labelSize * 0.9);
   const rulerText = (u, str, solid) => {
     if (!showTime || !str) return;
-    const off = two ? 0 : labelSide * (rlw / 2 + rlab + 6);
+    const off = two ? 0 : labelSide * (rlw / 2 + rlab + (candy ? 2 : 6));
     const p = path.at(u, off);
+    const tagFill = candy ? (dark ? '#ffffff' : '#2b2a27') : lineCol, tagInk = candy ? (dark ? '#1d2230' : '#ffffff') : bg.c;
     if (solid || two) {
       mctx.font = `600 ${rlab}px ${fam}`;
-      const w = mctx.measureText(str).width + 14;
-      el('rect', { x: p.x - w / 2, y: p.y - rlab * .75, width: w, height: rlab * 1.5, rx: rlab * .75, fill: solid ? lineCol : bg.c, opacity: .96 }, rulerG);
+      const w = mctx.measureText(str).width + rlab * .9;
+      el('rect', { x: p.x - w / 2, y: p.y - rlab * .75, width: w, height: rlab * 1.5, rx: rlab * .75, fill: solid ? tagFill : bg.c, opacity: .96 }, rulerG);
     }
-    text(rulerG, p.x, p.y, str, { family: fam, size: rlab, weight: 600, fill: solid ? bg.c : (dark ? mix(ink, bg.c, .2) : mix(ink, bg.c, .25)), anchor: 'middle', baseline: 'central' });
+    text(rulerG, p.x, p.y, str, { family: fam, size: rlab, weight: 600, fill: solid ? tagInk : (dark ? mix(ink, bg.c, .2) : mix(ink, bg.c, .25)), anchor: 'middle', baseline: 'central' });
   };
   if (S.ruler === 'bands' && majors.length) {
     const bounds = [0, ...majors.map(t => t.u).filter(u => u > 0 && u < 1), 1];
@@ -748,12 +843,97 @@ function render() {
   });
   const pad = 70;
   const vb = { x: all.x - pad, y: all.y - pad, w: all.r - all.x + pad * 2, h: all.b - all.y + pad * 2 };
-  stage.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
-  Object.assign(bgRect, {}); bgRect.setAttribute('x', vb.x); bgRect.setAttribute('y', vb.y); bgRect.setAttribute('width', vb.w); bgRect.setAttribute('height', vb.h);
   lastLayout = vb;
+  // the background rect is oversized so a zoomed-out or panned camera never shows the page behind it
+  bgRect.setAttribute('x', vb.x - vb.w * 2); bgRect.setAttribute('y', vb.y - vb.h * 2); bgRect.setAttribute('width', vb.w * 5); bgRect.setAttribute('height', vb.h * 5);
+  if (cam) cam.home = vb; else stage.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
   if (play) applyPlay(true);
   applyZoom();
+  readabilityHint();
 }
+
+/* ---------- camera: in Present the view moves and the layout stays put ---------- */
+let cam = null; // { home, cur, target, raf }
+function vbStr(v) { return `${v.x.toFixed(1)} ${v.y.toFixed(1)} ${v.w.toFixed(1)} ${v.h.toFixed(1)}`; }
+function camStart() {
+  if (cam) return;
+  cam = { home: lastLayout, cur: Object.assign({}, lastLayout), target: Object.assign({}, lastLayout), raf: 0 };
+}
+function camTick() {
+  if (!cam) return;
+  const c = cam.cur, t = cam.target, k = 0.14;
+  let done = true;
+  for (const key of ['x', 'y', 'w', 'h']) {
+    const d = t[key] - c[key];
+    if (Math.abs(d) > Math.max(0.05, t.w * 0.0004)) { c[key] += d * k; done = false; } else c[key] = t[key];
+  }
+  stage.setAttribute('viewBox', vbStr(c));
+  cam.raf = done ? 0 : requestAnimationFrame(camTick);
+}
+function cameraTo(v, instant) {
+  camStart();
+  cam.target = v;
+  if (instant) { cam.cur = Object.assign({}, v); stage.setAttribute('viewBox', vbStr(v)); return; }
+  if (!cam.raf) cam.raf = requestAnimationFrame(camTick);
+}
+function cameraReset(instant) { if (cam) cameraTo(Object.assign({}, cam.home), instant); }
+function cameraIsHome() { return !cam || (Math.abs(cam.target.w - cam.home.w) < 1 && Math.abs(cam.target.x - cam.home.x) < 1 && Math.abs(cam.target.y - cam.home.y) < 1); }
+function cameraStop() { if (cam && cam.raf) cancelAnimationFrame(cam.raf); cam = null; }
+// stage box of an element, including its transform, in viewBox units
+function stageBox(node) {
+  const ctm = stage.getScreenCTM(); if (!ctm) return null;
+  const r = node.getBoundingClientRect(), inv = ctm.inverse();
+  const a = new DOMPoint(r.left, r.top).matrixTransform(inv), b = new DOMPoint(r.right, r.bottom).matrixTransform(inv);
+  return { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y };
+}
+// frame a card (and its marker) so it fills about `frac` of the screen height
+function cameraFocusCard(card, frac = 0.6, minCards = 2.8) {
+  if (!card || !lastLayout) return;
+  const box = stageBox(card); if (!box) return;
+  const ld = stage.querySelector(`.ld[data-id="${card.dataset.id}"]`);
+  let x0 = box.x, y0 = box.y, x1 = box.x + box.w, y1 = box.y + box.h;
+  if (ld) { const mx = +ld.getAttribute('x1'), my = +ld.getAttribute('y1'); x0 = Math.min(x0, mx - 20); y0 = Math.min(y0, my - 20); x1 = Math.max(x1, mx + 20); y1 = Math.max(y1, my + 20); }
+  const bw = x1 - x0, bh = y1 - y0, aspect = (stage.clientWidth || 16) / (stage.clientHeight || 9);
+  let h = bh / frac, w = h * aspect;
+  if (w < bw / 0.85) { w = bw / 0.85; h = w / aspect; }
+  // never zoom in past the point where the card text would be comically large on screen
+  const minW = Math.min(lastLayout.w, Math.max(+doc.settings.cardSize * minCards, 600));
+  if (w < minW) { w = minW; h = w / aspect; }
+  cameraTo({ x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - h / 2, w, h });
+}
+// scroll to zoom around the cursor, drag to pan (Present only)
+(function presentNav() {
+  const wrapEl = document.getElementById('stageWrap');
+  let pan = null;
+  const toStage = (cx, cy) => { const m = stage.getScreenCTM(); return m ? new DOMPoint(cx, cy).matrixTransform(m.inverse()) : null; };
+  wrapEl.addEventListener('wheel', ev => {
+    if (!document.body.classList.contains('presenting') || !lastLayout) return;
+    ev.preventDefault();
+    camStart();
+    const v = cam.target, pt = toStage(ev.clientX, ev.clientY); if (!pt) return;
+    const f = Math.exp(ev.deltaY * 0.0012);
+    const w = Math.max(lastLayout.w * 0.06, Math.min(lastLayout.w * 2.5, v.w * f)), h = v.h * (w / v.w);
+    const rx = (pt.x - v.x) / v.w, ry = (pt.y - v.y) / v.h;
+    cameraTo({ x: pt.x - rx * w, y: pt.y - ry * h, w, h }, true);
+  }, { passive: false });
+  stage.addEventListener('pointerdown', ev => {
+    if (!document.body.classList.contains('presenting') || ev.button !== 0) return;
+    pan = { x: ev.clientX, y: ev.clientY, v: Object.assign({}, (cam || camStart(), cam.target)), moved: false };
+  });
+  window.addEventListener('pointermove', ev => {
+    if (!pan) return;
+    const dx = ev.clientX - pan.x, dy = ev.clientY - pan.y;
+    if (!pan.moved && Math.hypot(dx, dy) < 6) return;
+    pan.moved = true; document.body.classList.add('panning');
+    const sx = pan.v.w / (stage.clientWidth || 1), sy = pan.v.h / (stage.clientHeight || 1), s = Math.max(sx, sy);
+    cameraTo({ x: pan.v.x - dx * s, y: pan.v.y - dy * s, w: pan.v.w, h: pan.v.h }, true);
+  });
+  window.addEventListener('pointerup', () => {
+    if (!pan) return;
+    if (pan.moved) { suppressClick = true; setTimeout(() => { suppressClick = false; }, 50); }
+    pan = null; document.body.classList.remove('panning');
+  });
+})();
 
 
 /* card placement: try short leaders first, then slide along the line, flip sides, reach further out */
@@ -789,16 +969,20 @@ function buildCard(e, tr, o) {
   const bubble = style === 'bubble', polaroid = style === 'polaroid', plain = style === 'plain';
   const pad = plain ? 0 : polaroid ? 12 : 14;
   const inner = o.cw - pad * 2;
-  const txt = bubble ? '#ffffff' : (plain ? o.ink : (['night', 'chalkboard', 'ink'].includes(o.bg.id) && style === 'card' ? '#f3efe6' : '#2b2a27'));
-  const cardFill = bubble ? tr.color : (style === 'card' && ['night', 'chalkboard', 'ink'].includes(o.bg.id) ? '#2c3240' : '#ffffff');
+  const darkBg = isDarkBg(o.bg);
+  const txt = bubble ? '#ffffff' : (plain ? o.ink : (darkBg && style === 'card' ? '#f3efe6' : '#2b2a27'));
+  const cardFill = bubble ? tr.color : (style === 'card' && darkBg ? '#2c3240' : '#ffffff');
   const parts = [];
   let y = pad;
   if (e.image) {
-    const ih = Math.round(inner * Math.max(.45, Math.min(1.25, e.ar || .75)));
+    const shape = S.photoShape || 'natural';
+    const ar = shape === 'square' || shape === 'round' ? 1 : shape === 'wide' ? 0.6 : Math.max(.45, Math.min(1.25, e.ar || .75));
+    const ih = Math.round(inner * ar);
     parts.push(() => {
       const cid = 'c' + e.id;
       const cp = el('clipPath', { id: cid }, stage.querySelector('defs'));
-      el('rect', { x: pad, y: imgY, width: inner, height: ih, rx: polaroid ? 2 : 8 }, cp);
+      if (shape === 'round') el('circle', { cx: pad + inner / 2, cy: imgY + ih / 2, r: inner / 2 }, cp);
+      else el('rect', { x: pad, y: imgY, width: inner, height: ih, rx: polaroid ? 2 : 8 }, cp);
       el('image', { href: e.image, x: pad, y: imgY, width: inner, height: ih, preserveAspectRatio: 'xMidYMid slice', 'clip-path': `url(#${cid})` }, g);
     });
     var imgY = y; y += ih;
@@ -865,18 +1049,20 @@ function changed(listToo) {
   if (!renderQueued) { renderQueued = true; requestAnimationFrame(() => { renderQueued = false; render(); }); }
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(doc)); }
-    catch (err) { toast('Too many photos to autosave here. Use Save file to keep your work.'); }
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(doc)); autosaveWarned = false; }
+    catch (err) { if (!autosaveWarned) { autosaveWarned = true; toast('Too many photos to autosave here. Use Save file to keep your work.'); } }
   }, 600);
 }
+let autosaveWarned = false;
 function loadDoc(d) {
   const base = newDoc();
   doc = Object.assign(base, d);
   doc.settings = Object.assign(defaultSettings(), d.settings || {});
   if (!Array.isArray(doc.tracks) || doc.tracks.length < 2) doc.tracks = base.tracks.map((t, i) => Object.assign(t, (d.tracks || [])[i] || {}));
   doc.events = (doc.events || []).map(e => Object.assign(newEvent(), e));
-  selectedId = null;
+  selectedId = null; autosaveWarned = false;
   syncControls(); renderList(); changed();
+  compressDoc();
 }
 function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
 function slug(s) { return (s || 'timeline').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'timeline'; }
@@ -892,15 +1078,34 @@ function shrinkImage(blob, maxSide = 1000) {
       const c = document.createElement('canvas');
       c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
       const cx = c.getContext('2d');
-      const png = blob.type === 'image/png';
-      if (!png) { cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height); }
       cx.drawImage(img, 0, 0, c.width, c.height);
+      // keep PNG only when the picture actually uses transparency; a photo saved as PNG is ten times the size for nothing
+      let png = false;
+      if (blob.type === 'image/png') {
+        const px = cx.getImageData(0, 0, c.width, c.height).data;
+        for (let i = 3; i < px.length; i += 4 * 97) if (px[i] < 250) { png = true; break; }
+      }
+      if (!png) { cx.globalCompositeOperation = 'destination-over'; cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height); }
       URL.revokeObjectURL(url);
-      res({ data: c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.85), ar: c.height / c.width });
+      res({ data: c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.84), ar: c.height / c.width });
     };
     img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Not an image')); };
     img.src = url;
   });
+}
+// photos saved by an older build can weigh 2 MB each; shrink them again so autosave and Save file stay small
+async function compressDoc() {
+  const heavy = doc.events.filter(e => e.image && e.image.length > 350000);
+  if (!heavy.length) return;
+  let saved = 0;
+  for (const e of heavy) {
+    try {
+      const b = await (await fetch(e.image)).blob();
+      const s = await shrinkImage(b, 1000);
+      if (s.data.length < e.image.length) { saved += e.image.length - s.data.length; e.image = s.data; }
+    } catch (err) { /* keep the original */ }
+  }
+  if (saved) { changed(true); toast(`Photos compressed: the timeline is ${Math.round(saved / 1048576 * 10) / 10} MB smaller`); }
 }
 async function addPhotos(files) {
   const imgs = [...files].filter(f => f.type.startsWith('image/'));
@@ -924,6 +1129,7 @@ async function exportPng() {
   const prevSel = selectedId; selectedId = null; render();
   const vb = lastLayout, scale = Math.min(3, 6000 / Math.max(vb.w, vb.h)) || 2;
   const clone = stage.cloneNode(true);
+  clone.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
   clone.setAttribute('width', Math.round(vb.w * scale)); clone.setAttribute('height', Math.round(vb.h * scale));
   clone.removeAttribute('style');
   const src = new XMLSerializer().serializeToString(clone);
@@ -1033,32 +1239,62 @@ function buildCandyChips() {
 buildChips('spacingChips', [{ id: 'date', name: 'By date' }, { id: 'even', name: 'Even' }], null, 'spacing');
 ['font', 'titleFont'].forEach(id => { $(id).innerHTML = FONTS.map(f => `<option value="${f.id}" style="font-family:${f.stack.replace(/"/g, "'")}">${f.name}</option>`).join(''); });
 (function bgSw() {
-  const box = $('bgSwatches');
-  BACKGROUNDS.forEach(b => { const s = document.createElement('button'); s.className = 'swatch'; s.style.background = b.c; s.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,.2)'; s.title = b.id; s.dataset.v = b.id; s.onclick = () => { doc.settings.bg = b.id; syncControls(); changed(); }; box.appendChild(s); });
-  const tbox = $('textSwatches');
-  TEXT_COLORS.forEach(c => { const s = document.createElement('button'); s.className = 'swatch'; s.dataset.v = c; s.title = c === 'auto' ? 'Automatic' : c; s.style.background = c === 'auto' ? 'linear-gradient(135deg,#2b2a27 50%,#faf6ee 50%)' : c; s.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,.2)'; s.onclick = () => { doc.settings.textColor = c; syncControls(); changed(); }; tbox.appendChild(s); });
+  const box = $('bgSwatches'), custom = $('bgCustom');
+  BACKGROUNDS.forEach(b => { const s = document.createElement('button'); s.className = 'swatch'; s.style.background = b.c; s.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,.2)'; s.title = b.id; s.dataset.v = b.id; s.onclick = () => { doc.settings.bg = b.id; syncControls(); changed(); }; box.insertBefore(s, custom); });
+  custom.addEventListener('input', () => { doc.settings.bg = 'custom'; doc.settings.bgCustom = custom.value; changed(); });
+  custom.addEventListener('change', () => syncControls());
+  const tbox = $('textSwatches'), tcustom = $('textCustom');
+  TEXT_COLORS.forEach(c => { const s = document.createElement('button'); s.className = 'swatch'; s.dataset.v = c; s.title = c === 'auto' ? 'Automatic' : c; s.style.background = c === 'auto' ? 'linear-gradient(135deg,#2b2a27 50%,#faf6ee 50%)' : c; s.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,.2)'; s.onclick = () => { doc.settings.textColor = c; syncControls(); changed(); }; tbox.insertBefore(s, tcustom); });
+  tcustom.addEventListener('input', () => { doc.settings.textColor = tcustom.value; changed(); });
+  tcustom.addEventListener('change', () => syncControls());
+  const lbox = $('lookChips');
+  LOOKS.forEach(l => {
+    const b = document.createElement('button'); b.className = 'look'; b.type = 'button'; b.title = l.name;
+    b.innerHTML = `<div class="pv" style="background:${l.pv.bg};color:${l.pv.ink};font-family:${l.pv.font.replace(/"/g, "'")}">Aa</div><span>${l.name}</span>`;
+    b.onclick = () => { Object.assign(doc.settings, l.s); if (!l.s.titleCase) doc.settings.titleCase = 'none'; syncControls(); changed(); toast(`${l.name} look`); };
+    lbox.appendChild(b);
+  });
 })();
 
-const bindSel = ['playSeconds', 'rulerDensity', 'rulerLabels', 'dateFormat', 'cardSize', 'marker', 'font', 'titleFont', 'titleCase'];
-const bindRange = ['lineWidth', 'titleSize', 'labelSize'];
+const bindSel = ['playSeconds', 'rulerDensity', 'rulerLabels', 'dateFormat', 'marker', 'font', 'titleFont', 'titleCase', 'photoShape'];
+const bindRange = ['lineWidth', 'titleSize', 'labelSize', 'cardSize'];
 const bindCheck = ['showTime', 'showCardDates', 'showCaptions', 'showCredits', 'boldTitles', 'italicCaptions', 'dateInTrackColor', 'showLegend'];
 bindSel.forEach(id => $(id).addEventListener('change', () => { doc.settings[id] = $(id).value; changed(); }));
-bindRange.forEach(id => $(id).addEventListener('input', () => { doc.settings[id] = +$(id).value; changed(); }));
+bindRange.forEach(id => $(id).addEventListener('input', () => { doc.settings[id] = +$(id).value; syncOutputs(); changed(); }));
 bindCheck.forEach(id => $(id).addEventListener('change', () => { doc.settings[id] = $(id).checked; changed(); }));
 $('docTitle').addEventListener('input', e => { doc.title = e.target.value; changed(); });
 $('docSubtitle').addEventListener('input', e => { doc.subtitle = e.target.value; changed(); });
+function syncOutputs() {
+  const S = doc.settings;
+  $('cardSizeOut').textContent = S.cardSize; $('titleSizeOut').textContent = S.titleSize; $('labelSizeOut').textContent = S.labelSize;
+}
+// how big card titles land on a 1440 px screen once the whole timeline is fitted to it
+function readabilityHint() {
+  if (!lastLayout) return;
+  const px = Math.round(doc.settings.labelSize * 1.08 * Math.min(1440 / lastLayout.w, 810 / lastLayout.h) * 10) / 10;
+  const n = $('readHint');
+  if (px >= 13) n.textContent = `Card titles land at about ${px} px when the whole timeline fits a screen. Easy to read.`;
+  else if (px >= 10) n.textContent = `Card titles land at about ${px} px when the whole timeline fits a screen. Fine up close; in Present, click a card or use Follow.`;
+  else n.textContent = `Card titles land at about ${px} px when the whole timeline fits a screen. Try wider cards, bigger text, or fewer events per timeline.`;
+}
 
 function syncControls() {
   const S = doc.settings;
   bindSel.forEach(id => $(id).value = String(S[id]));
   bindRange.forEach(id => $(id).value = S[id]);
   bindCheck.forEach(id => $(id).checked = !!S[id]);
+  syncOutputs();
   $('docTitle').value = doc.title; $('docSubtitle').value = doc.subtitle;
   [['shapeChips', 'shape'], ['rulerChips', 'ruler'], ['cardChips', 'cardStyle'], ['spacingChips', 'spacing']].forEach(([c, k]) => $(c).querySelectorAll('.chip').forEach(b => b.classList.toggle('on', b.dataset.v === S[k])));
   $('bgSwatches').querySelectorAll('.swatch').forEach(b => b.classList.toggle('on', b.dataset.v === S.bg));
+  $('bgCustom').value = S.bg === 'custom' && S.bgCustom ? S.bgCustom : currentBg().c;
+  $('bgCustom').style.outline = S.bg === 'custom' ? '2px solid var(--ink)' : '';
   document.body.classList.toggle('candy-shape', S.shape === 'candy');
   if (S.shape === 'candy') { buildCandyChips(); $('candyChips').querySelectorAll('.chip').forEach(b => b.classList.toggle('on', b.dataset.v === (S.candyPalette || 'classic'))); }
   $('textSwatches').querySelectorAll('.swatch').forEach(b => b.classList.toggle('on', b.dataset.v === S.textColor));
+  const customText = S.textColor !== 'auto' && !TEXT_COLORS.includes(S.textColor);
+  $('textCustom').value = customText ? S.textColor : (S.textColor === 'auto' ? currentBg().ink : S.textColor);
+  $('textCustom').style.outline = customText ? '2px solid var(--ink)' : '';
   renderTrackEditors();
 }
 
@@ -1209,21 +1445,47 @@ $('fileOpen').addEventListener('change', async ev => {
 $('btnPng').onclick = exportPng;
 function exitPresent() {
   stopPlay();
+  cameraStop();
   document.body.classList.remove('presenting'); stage.classList.remove('focusing');
+  $('presentHelp').classList.remove('open');
   if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
   render();
 }
 $('exitPresent').onclick = exitPresent;
 $('btnPresent').onclick = () => {
   document.body.classList.add('presenting'); selectedId = null; render();
+  camStart();
   if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
 };
+$('presentKeys').onclick = () => $('presentHelp').classList.toggle('open');
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('presenting')) exitPresent(); });
 document.addEventListener('keydown', e => {
-  if (!document.body.classList.contains('presenting')) return;
-  if (e.key === 'Escape') { const f = stage.querySelector('.card.focus'); if (f) unfocusCards(); else exitPresent(); }
+  if (!document.body.classList.contains('presenting') || orbit) return;
+  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (e.key === 'Escape') {
+    if ($('presentHelp').classList.contains('open')) { $('presentHelp').classList.remove('open'); return; }
+    const f = stage.querySelector('.card.focus');
+    if (f && !play) unfocusCards(); else if (!cameraIsHome()) cameraReset(); else exitPresent();
+  }
+  if (e.key === '0') { e.preventDefault(); cameraReset(); }
+  if (e.key === '?' || e.key === 'h') { $('presentHelp').classList.toggle('open'); }
+  if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFollow(); }
+  if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomKey(0.8); }
+  if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomKey(1.25); }
 });
-function unfocusCards() { stage.querySelectorAll('.card.focus').forEach(c => c.classList.remove('focus')); stage.classList.remove('focusing'); }
+function zoomKey(f) {
+  camStart();
+  const v = cam.target, w = Math.max(lastLayout.w * 0.06, Math.min(lastLayout.w * 2.5, v.w * f)), h = v.h * (w / v.w);
+  cameraTo({ x: v.x + (v.w - w) / 2, y: v.y + (v.h - h) / 2, w, h });
+}
+function unfocusCards(keepCamera) {
+  stage.querySelectorAll('.card.focus').forEach(c => c.classList.remove('focus')); stage.classList.remove('focusing');
+  if (!keepCamera && document.body.classList.contains('presenting')) cameraReset();
+}
+function focusCard(g, frac) {
+  g.parentNode.appendChild(g); g.classList.add('focus'); stage.classList.add('focusing');
+  cameraFocusCard(g, frac);
+}
 
 /* ---------- play: reveal events one by one while the presenter talks ---------- */
 let play = null; // { order: [ids], us: [u], dur, elapsed, last, paused, shown }
@@ -1250,16 +1512,25 @@ function applyPlay(force) {
   if (force || key !== play.shown) {
     const visible = new Set(play.order.slice(0, shown));
     stage.querySelectorAll('.card, .mk, .ld').forEach(n => n.classList.toggle('pending', !visible.has(n.dataset.id)));
-    unfocusCards();
+    unfocusCards(true);
     const cur = shown > 0 && play.elapsed < play.dur ? stage.querySelector(`.card[data-id="${play.order[shown - 1]}"]`) : null;
     if (cur && shown > 1) { cur.parentNode.appendChild(cur); cur.classList.add('focus'); stage.classList.add('focusing'); }
     else if (cur) { cur.parentNode.appendChild(cur); cur.classList.add('focus'); }
+    // Follow: the camera glides to each event as it appears, then pulls back to show the whole story at the end
+    if (doc.settings.follow) { if (cur) cameraFocusCard(cur, 0.42, 3.6); else cameraReset(); }
     play.shown = key;
   }
   $('pbFill').style.width = (100 * Math.min(1, play.elapsed / play.dur)) + '%';
   $('pbCount').textContent = `${shown} / ${play.order.length}`;
   $('pbPause').textContent = play.paused || play.elapsed >= play.dur ? '▶' : '⏸';
+  $('pbFollow').classList.toggle('on', !!doc.settings.follow);
   document.body.classList.toggle('paused', !!play.paused || play.elapsed >= play.dur);
+}
+function toggleFollow() {
+  doc.settings.follow = !doc.settings.follow;
+  if (play) { play.shown = -1; applyPlay(true); }
+  if (!doc.settings.follow) cameraReset();
+  toast(doc.settings.follow ? 'Follow on: the view zooms to each event' : 'Follow off: the whole timeline stays in view');
 }
 function tick(now) {
   if (!play) return;
@@ -1285,7 +1556,7 @@ function stopPlay() {
   stage.classList.remove('playing', 'done');
   stage.querySelectorAll('.pending').forEach(n => n.classList.remove('pending'));
   stage.querySelectorAll('.trackline').forEach(pth => { pth.removeAttribute('stroke-dasharray'); pth.removeAttribute('stroke-dashoffset'); });
-  unfocusCards();
+  unfocusCards(true);
 }
 function jump(dir) {
   if (!play) return;
@@ -1300,8 +1571,9 @@ $('btnPlay').onclick = () => startPlay();
 $('pbPause').onclick = () => { if (!play) return; if (play.elapsed >= play.dur) { startPlay(); return; } play.paused = !play.paused; applyPlay(false); };
 $('pbNext').onclick = () => jump(1);
 $('pbPrev').onclick = () => jump(-1);
-$('pbStop').onclick = () => stopPlay();
+$('pbStop').onclick = () => { stopPlay(); cameraReset(); };
 $('pbReplay').onclick = () => startPlay();
+$('pbFollow').onclick = toggleFollow;
 document.addEventListener('keydown', e => {
   if (!play || !document.body.classList.contains('presenting')) return;
   if (e.key === ' ') { e.preventDefault(); $('pbPause').onclick(); }
@@ -1358,8 +1630,8 @@ async function startOrbit(from) {
   let THREE;
   try { THREE = await import(THREE_URL); } catch (err) { toast('Orbit needs an internet connection the first time (it loads three.js).'); return; }
   const S = doc.settings;
-  const bg = BACKGROUNDS.find(b => b.id === S.bg) || BACKGROUNDS[0];
-  const dark = ['night', 'chalkboard', 'ink'].includes(bg.id);
+  const bg = currentBg();
+  const dark = isDarkBg(bg);
   const ink = S.textColor === 'auto' ? bg.ink : S.textColor;
   const fam = fontStack(S.font), tfam = fontStack(S.titleFont);
   const tracks = doc.tracks.filter(t => t.on);
@@ -1586,7 +1858,7 @@ function orbitToFlat(k, paused, done) {
   $('btnPresent').onclick();
   const id = lastEvs.slice().sort((a, b) => lastP.pos.get(a.id) - lastP.pos.get(b.id))[k]?.id;
   const card = id && stage.querySelector(`.card[data-id="${id}"]`);
-  if (card) { card.parentNode.appendChild(card); card.classList.add('focus'); stage.classList.add('focusing'); }
+  if (card) focusCard(card);
 }
 function flatToOrbit() {
   let from = null;
@@ -1702,9 +1974,10 @@ stage.addEventListener('click', e => {
   if (suppressClick) return;
   const g = e.target.closest('.card');
   if (document.body.classList.contains('presenting')) {
+    if (play) { if (g) { const k = play.order.indexOf(g.dataset.id); if (k >= 0) { play.elapsed = playTimes()[k] + 0.001; play.paused = true; applyPlay(true); } } return; }
     const was = g && g.classList.contains('focus');
     unfocusCards();
-    if (g && !was) { g.parentNode.appendChild(g); g.classList.add('focus'); stage.classList.add('focusing'); }
+    if (g && !was) focusCard(g);
     return;
   }
   if (!g) return;
