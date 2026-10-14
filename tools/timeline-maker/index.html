@@ -268,7 +268,7 @@ body.presenting.panning #stage { cursor: grabbing; }
 <div id="presentHelp">
   <b>Click</b> a card to zoom in, click again or Esc to zoom out<br>
   <b>Scroll</b> to zoom, <b>drag</b> to move, <b>0</b> to fit the screen<br>
-  <b>Space</b> play or pause, <b>←</b> <b>→</b> step<br>
+  <b>←</b> <b>→</b> previous or next card, <b>Space</b> play or pause<br>
   <b>F</b> follow the current event while playing<br>
   <b>O</b> orbit view, <b>Esc</b> back to editing
 </div>
@@ -1468,6 +1468,8 @@ document.addEventListener('keydown', e => {
     if (f && !play) unfocusCards(); else if (!cameraIsHome()) cameraReset(); else exitPresent();
   }
   if (e.key === '0') { e.preventDefault(); cameraReset(); }
+  if (!play && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { e.preventDefault(); stepFocus(e.key === 'ArrowRight' ? 1 : -1); }
+  if (!play && (e.key === 'Home' || e.key === 'End')) { e.preventDefault(); stepFocus(e.key === 'Home' ? -Infinity : Infinity); }
   if (e.key === '?' || e.key === 'h') { $('presentHelp').classList.toggle('open'); }
   if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFollow(); }
   if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomKey(0.8); }
@@ -1481,6 +1483,18 @@ function zoomKey(f) {
 function unfocusCards(keepCamera) {
   stage.querySelectorAll('.card.focus').forEach(c => c.classList.remove('focus')); stage.classList.remove('focusing');
   if (!keepCamera && document.body.classList.contains('presenting')) cameraReset();
+}
+// arrow keys in Present (not playing): walk the cards in timeline order, zooming to each
+function stepFocus(dir) {
+  if (!lastP || !lastEvs.length) return;
+  const order = lastEvs.slice().sort((a, b) => lastP.pos.get(a.id) - lastP.pos.get(b.id)).map(e => e.id);
+  const f = stage.querySelector('.card.focus');
+  let k = f ? order.indexOf(f.dataset.id) + dir : (dir > 0 ? 0 : order.length - 1);
+  k = Math.max(0, Math.min(order.length - 1, k));
+  const g = stage.querySelector(`.card[data-id="${order[k]}"]`);
+  if (!g) return;
+  unfocusCards(true);
+  focusCard(g);
 }
 function focusCard(g, frac) {
   g.parentNode.appendChild(g); g.classList.add('focus'); stage.classList.add('focusing');
@@ -1517,7 +1531,7 @@ function applyPlay(force) {
     if (cur && shown > 1) { cur.parentNode.appendChild(cur); cur.classList.add('focus'); stage.classList.add('focusing'); }
     else if (cur) { cur.parentNode.appendChild(cur); cur.classList.add('focus'); }
     // Follow: the camera glides to each event as it appears, then pulls back to show the whole story at the end
-    if (doc.settings.follow) { if (cur) cameraFocusCard(cur, 0.42, 3.6); else cameraReset(); }
+    if (doc.settings.follow) { if (cur) cameraFocusCard(cur, 0.66, 2.2); else cameraReset(); }
     play.shown = key;
   }
   $('pbFill').style.width = (100 * Math.min(1, play.elapsed / play.dur)) + '%';
