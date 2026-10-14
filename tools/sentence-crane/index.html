@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sentence Crane</title>
+<style>
+  :root {
+    --cream: #f6efe2; --sand: #ebe1cc; --ink: #2b2620; --dim: #6e6357;
+    --sage: #5f7d50; --sageT: #dfe8d2; --ocean: #2f6f8f; --clay: #b0522c; --gold: #d9a441;
+    --font: "Avenir Next", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--ink); color: var(--ink); font-family: var(--font); }
+  #game { position: fixed; inset: 0; display: block; }
+  .screen { position: fixed; inset: 0; overflow-y: auto; background: var(--cream); padding: 4vh 4vw; }
+  .hidden { display: none; }
+  .card { max-width: 1100px; margin: 0 auto; }
+  .kicker { font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--ocean); font-size: 16px; }
+  h1 { font-size: clamp(40px, 6vw, 72px); margin: 4px 0 6px; letter-spacing: -1px; }
+  .lede { font-size: clamp(20px, 2.2vw, 26px); color: var(--dim); margin: 0 0 3vh; }
+  .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 3vh; }
+  .slot { border: 3px dashed #c9bda5; border-radius: 18px; padding: 16px; text-align: center; color: var(--dim); background: #fffdf8; }
+  .slot.in { border: 3px solid var(--pc); color: var(--ink); box-shadow: 0 6px 0 var(--pc); }
+  .slot .glyph { font-size: 34px; color: var(--pc); line-height: 1; }
+  .slot .pn { font-weight: 800; font-size: 26px; margin: 4px 0; }
+  .slot .who { font-size: 16px; }
+  .row { display: flex; align-items: flex-start; gap: 16px; padding: 10px 12px; border-radius: 14px; border: 2px solid transparent; }
+  .row.focus { border-color: var(--ocean); background: #fffdf8; }
+  .rlabel { flex: 0 0 110px; font-weight: 800; font-size: 20px; padding-top: 8px; }
+  .modes { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font: 600 19px var(--font); padding: 8px 16px; border-radius: 999px; border: 2px solid #c9bda5; background: #fffdf8; color: var(--ink); cursor: pointer; }
+  .chip.on { background: var(--ocean); border-color: var(--ocean); color: #fffdf8; }
+  .tip { font-size: 20px; color: var(--dim); margin: 10px 12px 2.5vh; min-height: 1.3em; }
+  .howto { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px 24px; font-size: 18px; margin-bottom: 3vh; }
+  .howto b { display: inline-block; min-width: 2.2em; font-weight: 800; }
+  .howto .keys { grid-column: 1 / -1; font-size: 15px; color: var(--dim); }
+  .btn { font: 800 22px var(--font); padding: 14px 28px; border-radius: 14px; border: 0; background: var(--sage); color: #fffdf8; cursor: pointer; }
+  .btn:disabled { background: #c9bda5; cursor: default; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 2px solid var(--ink); }
+  .hint { color: var(--dim); font-size: 15px; }
+  pre { white-space: pre-wrap; font-size: 15px; }
+
+  /* results */
+  .podium { display: flex; flex-wrap: wrap; gap: 14px; margin: 2vh 0 3vh; }
+  .pod { flex: 1 1 200px; background: #fffdf8; border: 3px solid var(--pc); border-radius: 18px; padding: 14px 18px; display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 4px 12px; }
+  .pod .place { font-size: 24px; font-weight: 800; color: var(--dim); grid-row: span 2; align-self: start; padding-top: 4px; }
+  .pod .glyph { color: var(--pc); font-size: 26px; }
+  .pod .pn { font-weight: 800; font-size: 24px; }
+  .pod .big { grid-column: 2 / 3; font-size: 44px; font-weight: 800; line-height: 1; }
+  .pod .small { color: var(--dim); font-size: 16px; }
+  .review { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-bottom: 3vh; }
+  .review section { background: #fffdf8; border-radius: 18px; border-top: 6px solid var(--pc); padding: 12px 18px; }
+  .review h3 { margin: 4px 0 8px; font-size: 22px; }
+  .review h3 .glyph { color: var(--pc); }
+  .review ol { margin: 0; padding-left: 22px; }
+  .review li { margin: 0 0 14px; }
+  .review .fn { font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ocean); }
+  .review .tag { margin-left: 8px; color: var(--clay); }
+  .review .sent { font-size: 21px; line-height: 1.4; }
+  .review li.skipped .sent, .review li.unfinished .sent { color: var(--dim); }
+  .review .extra { font-size: 15px; color: var(--dim); }
+  .review .none { color: var(--dim); list-style: none; }
+  mark { background: none; color: #8a5f12; font-weight: 800; text-decoration: underline 3px var(--gold); text-underline-offset: 4px; }
+  .actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  @media (max-width: 700px) { .slots { grid-template-columns: repeat(2, 1fr); } .row { flex-direction: column; } }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="join" class="screen">
+  <div class="card">
+    <div class="kicker">ESL arcade</div>
+    <h1>Sentence Crane</h1>
+    <p class="lede">Lift the words into the right order, and leave the one extra word in the pit.</p>
+    <div id="slots" class="slots"></div>
+    <div class="row" data-row="0"><span class="rlabel">Function</span><div id="modes" class="modes"></div></div>
+    <div class="row" data-row="1"><span class="rlabel">Round</span><div id="lengths" class="modes"></div></div>
+    <p id="modeTip" class="tip"></p>
+    <div class="howto">
+      <div><b>Stick</b> Move the crane</div>
+      <div><b>&#x2715;</b> Grab a word. Press again to lift it into your sentence.</div>
+      <div><b>&#x25CB;</b> Drop the word back</div>
+      <div><b>&#x25B3;</b> Twice to skip a sentence</div>
+      <div class="keys">On the join screen: up and down pick a row, left and right change it, Options starts. Keyboard players: WASD with F grab, R drop, H skip. Arrows with comma grab, ' drop, / skip. Enter starts.</div>
+    </div>
+    <div class="actions">
+      <button id="startBtn" class="btn">Start</button>
+      <span id="soundHint" class="hint">Click anywhere once to turn on sound.</span>
+    </div>
+  </div>
+</div>
+
+<div id="results" class="screen hidden">
+  <div class="card">
+    <div class="kicker">Round over</div>
+    <h1>Results</h1>
+    <div id="podium" class="podium"></div>
+    <div id="review" class="review"></div>
+    <div class="actions">
+      <button id="againBtn" class="btn">Play again (Options or Enter)</button>
+      <button id="setupBtn" class="btn ghost">Change setup (&#x25CB; or Esc)</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/sentences.js"></script>
+<script src="js/input.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

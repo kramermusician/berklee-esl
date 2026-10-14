@@ -28,6 +28,8 @@ shared/
 tools/
   cabinet/                  Stuff to Track, a localStorage filing cabinet
   timeline-maker/           Timeline Maker, photos and dates on a shaped line
+  preposition-blaster/      arcade grammar game, one small word per sentence
+  sentence-crane/           1-4 player gamepad crane game for function words
 ```
 
 ## Adding material
