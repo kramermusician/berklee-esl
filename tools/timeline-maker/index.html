@@ -101,6 +101,7 @@ body.presenting.playing #playBar { display: flex; }
 #stage.playing .card.pending .zoomable { opacity: 0; transform: scale(.6); }
 #stage.playing .pending.mk, #stage.playing .pending.ld { opacity: 0; }
 #stage .mk, #stage .ld, #stage .tile { transition: opacity .3s ease; }
+#stage .span .sp { transition: stroke-dashoffset .25s linear; }
 #stage.playing .tile.pending { opacity: .12; }
 #presentOrbit { display: none; position: fixed; top: 14px; right: 104px; z-index: 20; opacity: .35; transition: opacity .2s; }
 #presentOrbit:hover, #presentOrbit:focus { opacity: 1; }
@@ -223,6 +224,7 @@ body.presenting.panning #stage { cursor: grabbing; }
       </div>
       <label class="check"><input type="checkbox" id="showTime"> Show time labels</label>
       <label class="check"><input type="checkbox" id="showCardDates"> Show the date on each card</label>
+      <label class="check"><input type="checkbox" id="showDuration"> Show how long each span lasts (4 years, 3 months)</label>
       <div class="field"><label>Date format</label>
         <select id="dateFormat"><option value="long">August 10, 1920</option><option value="short">Aug 10, 1920</option><option value="numeric">1920-08-10</option></select></div>
       <hr>
@@ -371,7 +373,7 @@ function defaultSettings() {
     marker: 'dot', lineWidth: 6, showCaptions: true, showCredits: true, bg: 'paper',
     font: 'avenir', titleFont: 'avenir', titleSize: 52, labelSize: 16, textColor: 'auto',
     titleCase: 'none', candyPalette: 'classic', candyCustom: null, boldTitles: true, italicCaptions: false, dateInTrackColor: true, showLegend: true, playSeconds: 30,
-    photoShape: 'natural', bgCustom: null, follow: true
+    photoShape: 'natural', bgCustom: null, follow: true, showDuration: true
   };
 }
 function newDoc() {
@@ -384,13 +386,14 @@ function newDoc() {
 }
 function newEvent(track) {
   return { id: uid(), track: track || 'a', title: 'New event', caption: '', precision: 'year',
-           y: new Date().getFullYear(), m: 1, d: 1, dateLabel: '', image: null, ar: 0.75, credit: '', note: '' };
+           y: new Date().getFullYear(), m: 1, d: 1, endPrecision: 'none', ey: '', em: 1, ed: 1,
+           dateLabel: '', image: null, ar: 0.75, credit: '', note: '' };
 }
 
 let doc = newDoc();
 let selectedId = null;
 let lastLayout = null;
-let lastPath = null, lastP = null, lastEvs = [];
+let lastPath = null, lastP = null, lastEvs = [], lastSpans = [];
 let drag = null; // { id, frozen: {t0, t1}, u, moved }
 
 /* ---------- dates ---------- */
@@ -401,15 +404,49 @@ function tval(e) {
   if (e.precision === 'day') t += ((+e.d || 1) - 1) / 12 / 31;
   return t;
 }
+// now, as a fractional year, for events that are still going on
+function tnow() { const n = new Date(); return n.getFullYear() + n.getMonth() / 12 + (n.getDate() - 1) / 12 / 31; }
+// end of a span, or null for a single moment (an end that is not after the start counts as a moment)
+function tend(e) {
+  const t0 = tval(e); if (t0 == null || !e.endPrecision || e.endPrecision === 'none') return null;
+  if (e.endPrecision === 'now') return tnow() > t0 ? tnow() : null;
+  const t = tval({ precision: e.endPrecision, y: e.ey, m: e.em, d: e.ed });
+  return t != null && t > t0 ? t : null;
+}
+function ongoing(e) { return tend(e) != null && e.endPrecision === 'now'; }
 function yearStr(y) { y = Math.round(y); return y < 0 ? `${-y} BCE` : String(y); }
+function fmtOne(precision, y0, m0, d0) {
+  const f = doc.settings.dateFormat, y = yearStr(y0), m = (+m0 || 1), d = (+d0 || 1);
+  if (precision === 'year') return y;
+  if (precision === 'month') return f === 'numeric' ? `${y0}-${String(m).padStart(2, '0')}` : `${(f === 'long' ? MONTHS : MON)[m - 1]} ${y}`;
+  if (f === 'numeric') return `${y0}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  return `${(f === 'long' ? MONTHS : MON)[m - 1]} ${d}, ${y}`;
+}
 function fmtDate(e) {
   if (e.dateLabel && e.dateLabel.trim()) return e.dateLabel.trim();
   if (tval(e) == null) return '';
-  const f = doc.settings.dateFormat, y = yearStr(e.y), m = (+e.m || 1), d = (+e.d || 1);
-  if (e.precision === 'year') return y;
-  if (e.precision === 'month') return f === 'numeric' ? `${e.y}-${String(m).padStart(2, '0')}` : `${(f === 'long' ? MONTHS : MON)[m - 1]} ${y}`;
-  if (f === 'numeric') return `${e.y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-  return `${(f === 'long' ? MONTHS : MON)[m - 1]} ${d}, ${y}`;
+  const start = fmtOne(e.precision, e.y, e.m, e.d);
+  if (tend(e) == null) return start;
+  return start + ' \u2013 ' + (ongoing(e) ? 'present' : fmtOne(e.endPrecision, e.ey, e.em, e.ed));
+}
+// "4 years", "3 months", "10 days"; ongoing spans say "so far"
+function spanLength(e) {
+  const t0 = tval(e), t1 = tend(e); if (t1 == null) return '';
+  const dt = t1 - t0, pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  const fine = e.precision === 'day' && e.endPrecision === 'day';
+  const months = Math.round(dt * 12), years = Math.round(dt);
+  let out;
+  if (e.precision === 'year' && (e.endPrecision === 'year' || e.endPrecision === 'now')) out = pl(Math.max(1, years), 'year');
+  else if (fine && dt * 372 < 60) out = pl(Math.max(1, Math.round(dt * 372)), 'day');
+  else if (months < 24 && months % 12) out = pl(Math.max(1, months), 'month');
+  else out = pl(Math.max(1, years), 'year');
+  return ongoing(e) ? out + ' so far' : out;
+}
+function cardDateText(e) {
+  const S = doc.settings;
+  if (!(S.showTime && S.showCardDates)) return '';
+  const d = fmtDate(e), len = S.showDuration ? spanLength(e) : '';
+  return d && len ? `${d} \u00b7 ${len}` : d;
 }
 
 /* ---------- shapes: dense polylines in a local box ---------- */
@@ -530,7 +567,19 @@ function positions(evs) {
   if (!N) return { pos, t0: 0, t1: 1, mode: 'even' };
   const dated = evs.map((e, i) => ({ i, t: tval(e) })).filter(o => o.t != null);
   const tvals = dated.map(o => o.t);
-  const useDate = doc.settings.spacing === 'date' && dated.length >= 2 && Math.max(...tvals) > Math.min(...tvals);
+  const allT = tvals.concat(evs.map(tend).filter(t => t != null));
+  const useDate = doc.settings.spacing === 'date' && dated.length >= 2 && Math.max(...allT) > Math.min(...allT);
+  // even spacing: a time between two dated events lands between their slots, so spans can still be drawn
+  const evenUOf = () => {
+    const A = evs.map(e => ({ t: tval(e), u: pos.get(e.id) })).filter(a => a.t != null).sort((a, b) => a.t - b.t || a.u - b.u);
+    return t => {
+      if (!A.length) return null;
+      if (t <= A[0].t) return A[0].u;
+      for (let k = 1; k < A.length; k++) if (t <= A[k].t) { const a = A[k - 1], b = A[k]; return a.u + (b.u - a.u) * ((t - a.t) / ((b.t - a.t) || 1)); }
+      const a = A[0], b = A[A.length - 1], rate = b.t > a.t ? (b.u - a.u) / (b.t - a.t) : 0.9 / Math.max(1, A.length) / 1;
+      return Math.min(0.985, b.u + (t - b.t) * rate);
+    };
+  };
   if (!useDate && new Set(evs.map(e => e.track).filter(t => t !== BOTH)).size > 1 && dated.length) {
     // two timelines, even spacing: both lines share one set of date slots, so a spot on the line is
     // the same moment on each. Undated events ride just after the event above them in the list.
@@ -541,14 +590,14 @@ function positions(evs) {
     keyed.forEach(k => { if (k.undated || k.t !== prev) slot++; prev = k.undated ? NaN : k.t; k.slot = slot; });
     keyed.forEach(k => pos.set(k.e.id, slot === 0 ? 0.5 : 0.05 + 0.9 * k.slot / slot));
     if (drag && drag.u != null) pos.set(drag.id, drag.u);
-    return { pos, mode: 'even' };
+    return { pos, mode: 'even', uOf: evenUOf() };
   }
   if (!useDate) {
     evs.forEach((e, i) => pos.set(e.id, N === 1 ? 0.5 : 0.05 + 0.9 * i / (N - 1)));
     if (drag && drag.u != null) pos.set(drag.id, drag.u);
-    return { pos, mode: 'even' };
+    return { pos, mode: 'even', uOf: evenUOf() };
   }
-  let tmin = Math.min(...tvals), tmax = Math.max(...tvals);
+  let tmin = Math.min(...allT), tmax = Math.max(...allT);
   const pad = (tmax - tmin) * 0.06;
   let t0 = tmin - pad, t1 = tmax + pad;
   if (drag && drag.frozen) { t0 = drag.frozen.t0; t1 = drag.frozen.t1; }
@@ -570,7 +619,25 @@ function positions(evs) {
   }
   evs.forEach((e, k) => pos.set(e.id, uIdx[k]));
   if (drag && drag.u != null && drag.frozen) pos.set(drag.id, drag.u);
-  return { pos, t0, t1, mode: 'date' };
+  return { pos, t0, t1, mode: 'date', uOf: u };
+}
+// where a span ends on the line: { u0, u1 } or null for a single moment
+function spanOf(e, P) {
+  const t1 = tend(e); if (t1 == null || !P.uOf) return null;
+  const u0 = P.pos.get(e.id);
+  let u1 = P.mode === 'even' && ongoing(e) ? 1 : P.uOf(t1);
+  if (u1 == null) return null;
+  u1 = Math.max(0, Math.min(1, u1));
+  return u1 > u0 + 0.003 ? { u0, u1 } : null;
+}
+// spans on one line that overlap in time take separate lanes so they never hide each other
+function spanLanes(items) {
+  const lanes = [];
+  items.slice().sort((a, b) => a.u0 - b.u0).forEach(it => {
+    let k = lanes.findIndex(end => end + 0.004 < it.u0);
+    if (k < 0) { k = lanes.length; lanes.push(it.u1); } else lanes[k] = it.u1;
+    it.lane = k;
+  });
 }
 
 /* ---------- smart ruler ---------- */
@@ -780,6 +847,36 @@ function render() {
     });
   }
 
+  // spans: events with a duration get a bar along their line, from start to end
+  const spansG = el('g', {}, content), spanCaps = [];
+  const spanItems = evs.map(e => { const sp = spanOf(e, P); return sp ? Object.assign(sp, { e }) : null; }).filter(Boolean);
+  lastSpans = spanItems;
+  {
+    const sw = candy ? Math.max(10, tileH * 0.32) : Math.max(9, lw * 2.8);
+    const byLine = new Map();
+    spanItems.forEach(it => { const k = two && it.e.track !== BOTH ? it.e.track : 'one'; if (!byLine.has(k)) byLine.set(k, []); byLine.get(k).push(it); });
+    byLine.forEach((items, lineId) => {
+      spanLanes(items);
+      items.forEach(it => {
+        const e = it.e, tr = trackFor(e, tracks);
+        // lanes stack away from the other line (two timelines) or away from the ruler labels (one)
+        const dir = two && lineId !== 'one' ? Math.sign(trackOff(lineId)) || 1 : -(labelSide || 1);
+        const laneOff = it.lane * sw * 1.15 * dir;
+        const off = trackOff(e.track) + laneOff;
+        const g = el('g', { class: 'mk span', 'data-id': e.id }, spansG);
+        const solidEnd = ongoing(e) ? Math.max(it.u0, it.u1 - Math.min(0.06, (it.u1 - it.u0) * 0.5)) : it.u1;
+        // a highlighter band in a tint of the line's color, drawn under the line itself
+        const tint = candy ? tr.color : mix(tr.color, bg.c, dark ? .4 : .48);
+        if (candy) el('path', { d: path.d(it.u0, it.u1, off), stroke: dark ? bg.c : '#ffffff', 'stroke-width': sw + 4, fill: 'none', 'stroke-linecap': 'round' }, g);
+        el('path', { d: path.d(it.u0, solidEnd, off), pathLength: 1, class: 'sp', 'data-u0': it.u0.toFixed(4), 'data-u1': solidEnd.toFixed(4), stroke: tint, 'stroke-width': sw, 'stroke-opacity': candy ? .85 : 1, fill: 'none', 'stroke-linecap': 'round' }, g);
+        if (ongoing(e)) {
+          // the dashed tail says "still going"
+          el('path', { d: path.d(solidEnd, it.u1, off), stroke: tint, 'stroke-width': sw, 'stroke-opacity': candy ? .85 : 1, fill: 'none', 'stroke-linecap': 'butt', 'stroke-dasharray': `${(sw * .7).toFixed(1)} ${(sw * .7).toFixed(1)}`, class: 'sp-tail' }, g);
+        } else spanCaps.push(() => { const q = path.at(it.u1, off), r = Math.max(5, lw * .9); el('circle', { cx: q.x, cy: q.y, r, fill: bg.c, stroke: tr.color, 'stroke-width': Math.max(2.5, r * .55), class: 'mk', 'data-id': e.id }, capsG); });
+      });
+    });
+  }
+
   // tracks
   tracks.forEach(tr => {
     el('path', { d: path.d(0, 1, trackOff(tr.id)), pathLength: 1, class: 'trackline', stroke: tr.color, 'stroke-width': lw, 'stroke-opacity': candy ? 0 : null, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, content);
@@ -788,6 +885,8 @@ function render() {
     const ang = Math.atan2(end.y - pre.y, end.x - pre.x), a = lw * 2.4;
     el('path', { d: `M${end.x + Math.cos(ang) * a} ${end.y + Math.sin(ang) * a} L${end.x + Math.cos(ang + 2.5) * a} ${end.y + Math.sin(ang + 2.5) * a} L${end.x + Math.cos(ang - 2.5) * a} ${end.y + Math.sin(ang - 2.5) * a}Z`, fill: tr.color, class: 'arrowhead' }, content);
   });
+
+  const capsG = el('g', {}, content); spanCaps.forEach(f => f());
 
   // cards
   const leadersG = el('g', {}, content), markersG = el('g', {}, content), cardsG = el('g', {}, content);
@@ -1023,11 +1122,11 @@ function buildCard(e, tr, o) {
     }
     y += polaroid ? 14 : 10;
   }
-  const date = S.showTime && S.showCardDates ? fmtDate(e) : '';
+  const date = cardDateText(e);
   if (date) {
-    const ds = Math.round(o.ls * .85), dy = y + ds;
-    parts.push(() => text(g, pad, dy, date, { family: o.fam, size: ds, weight: 700, fill: bubble ? '#ffffff' : (S.dateInTrackColor ? tr.color : txt) }));
-    y += ds * 1.35;
+    const ds = Math.round(o.ls * .85);
+    const dl = wrap(date, ds, 700, 'normal', o.fam, inner, 2);
+    dl.forEach(l => { const dy = y + ds; parts.push(() => text(g, pad, dy, l, { family: o.fam, size: ds, weight: 700, fill: bubble ? '#ffffff' : (S.dateInTrackColor ? tr.color : txt) })); y += ds * 1.35; });
   }
   const ts = Math.round(o.ls * 1.08);
   const title = S.titleCase === 'upper' ? (e.title || '').toUpperCase() : (e.title || '');
@@ -1193,6 +1292,8 @@ async function loadStarter(st) {
       const [y, m, dd] = String(ev.date || '').split('-');
       e.precision = ev.precision || (dd ? 'day' : m ? 'month' : y ? 'year' : 'none');
       e.y = y ? +y : ''; e.m = m ? +m : 1; e.d = dd ? +dd : 1;
+      if (ev.end === 'present') e.endPrecision = 'now';
+      else if (ev.end) { const [ey, em, ed] = String(ev.end).split('-'); e.endPrecision = ed ? 'day' : em ? 'month' : 'year'; e.ey = +ey; e.em = em ? +em : 1; e.ed = ed ? +ed : 1; }
       if (ev.dateLabel) e.dateLabel = ev.dateLabel;
       if (ev.credit) { const c = ev.credit; e.credit = [c.title ? `"${c.title}"` : '', c.author ? `by ${c.author}` : '', c.license || '', 'via Wikimedia Commons'].filter(Boolean).join(', ').replace(', by', ' by'); }
       if (ev.image) {
@@ -1286,7 +1387,7 @@ buildChips('spacingChips', [{ id: 'date', name: 'By date' }, { id: 'even', name:
 
 const bindSel = ['playSeconds', 'rulerDensity', 'rulerLabels', 'dateFormat', 'marker', 'font', 'titleFont', 'titleCase', 'photoShape'];
 const bindRange = ['lineWidth', 'titleSize', 'labelSize', 'cardSize'];
-const bindCheck = ['showTime', 'showCardDates', 'showCaptions', 'showCredits', 'boldTitles', 'italicCaptions', 'dateInTrackColor', 'showLegend'];
+const bindCheck = ['showTime', 'showCardDates', 'showDuration', 'showCaptions', 'showCredits', 'boldTitles', 'italicCaptions', 'dateInTrackColor', 'showLegend'];
 bindSel.forEach(id => $(id).addEventListener('change', () => { doc.settings[id] = $(id).value; changed(); }));
 bindRange.forEach(id => $(id).addEventListener('input', () => { doc.settings[id] = +$(id).value; syncOutputs(); changed(); }));
 bindCheck.forEach(id => $(id).addEventListener('change', () => { doc.settings[id] = $(id).checked; changed(); }));
@@ -1373,7 +1474,17 @@ function renderList() {
           <select data-k="m">${MONTHS.map((m, k) => `<option value="${k + 1}" ${+e.m === k + 1 ? 'selected' : ''}>${m}</option>`).join('')}</select>
           <input type="number" data-k="d" min="1" max="31" value="${esc(e.d)}" title="Day">
         </div>
-        <div class="field"><label>Custom date text (optional)</label><input type="text" data-k="dateLabel" value="${esc(e.dateLabel)}" placeholder='e.g. "Late 1800s" or "My first week"'></div>
+        <div class="field end-field"><label>Until</label>
+          <select data-k="endPrecision">
+            <option value="none">Just a moment</option><option value="year">A year</option><option value="month">A month and year</option><option value="day">An exact day</option><option value="now">Still going on</option>
+          </select></div>
+        <div class="row end-row" style="margin-bottom:10px">
+          <input type="number" data-k="ey" placeholder="End year" value="${esc(e.ey)}" title="End year (use a minus sign for BCE)">
+          <select data-k="em">${MONTHS.map((m, k) => `<option value="${k + 1}" ${+e.em === k + 1 ? 'selected' : ''}>${m}</option>`).join('')}</select>
+          <input type="number" data-k="ed" min="1" max="31" value="${esc(e.ed)}" title="End day">
+        </div>
+        <p class="hint end-hint"></p>
+        <div class="field"><label>Custom date text (optional)</label><input type="text" data-k="dateLabel" value="${esc(e.dateLabel)}" placeholder='e.g. "Late 1800s" or "1998 to 2002"'></div>
         ${two ? `<div class="field"><label>Timeline</label><select data-k="track">${doc.tracks.map(t => `<option value="${t.id}" ${t.id === e.track ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}<option value="${BOTH}" ${e.track === BOTH ? 'selected' : ''}>Both timelines</option></select></div>` : ''}
         <div class="field"><label>Photo credit</label><input type="text" data-k="credit" value="${esc(e.credit)}" placeholder="Who took it, the license, where it came from"></div>
         ${e.note ? `<p class="hint">Note: ${esc(e.note)}</p>` : ''}
@@ -1387,11 +1498,21 @@ function renderList() {
         </div>
       </div>`;
     const prec = d.querySelector('[data-k=precision]'); prec.value = e.precision;
+    const eprec = d.querySelector('[data-k=endPrecision]'); eprec.value = e.endPrecision || 'none';
     const syncDateRow = () => {
       const row = d.querySelector('.date-row'), p = e.precision;
       row.style.display = p === 'none' ? 'none' : 'flex';
       row.children[1].style.display = p === 'month' || p === 'day' ? '' : 'none';
       row.children[2].style.display = p === 'day' ? '' : 'none';
+      // a span needs a start, so Until only shows once the event has a date
+      const ep = e.endPrecision || 'none', erow = d.querySelector('.end-row'), hint = d.querySelector('.end-hint');
+      d.querySelector('.end-field').style.display = p === 'none' ? 'none' : '';
+      erow.style.display = p === 'none' || ep === 'none' || ep === 'now' ? 'none' : 'flex';
+      erow.children[1].style.display = ep === 'month' || ep === 'day' ? '' : 'none';
+      erow.children[2].style.display = ep === 'day' ? '' : 'none';
+      const bad = p !== 'none' && ep !== 'none' && tend(e) == null;
+      hint.textContent = bad ? 'The end has to come after the start, so this still shows as a single moment.' : (tend(e) != null ? `Shows as a span: ${spanLength(e)}.` : '');
+      hint.style.display = hint.textContent ? '' : 'none';
     };
     syncDateRow();
     d.querySelector('.ev-head').onclick = () => { selectedId = selectedId === e.id ? null : e.id; renderList(); changed(); };
@@ -1399,8 +1520,10 @@ function renderList() {
     d.querySelectorAll('[data-k]').forEach(inp => {
       const k = inp.dataset.k;
       inp.addEventListener(inp.tagName === 'SELECT' ? 'change' : 'input', () => {
-        e[k] = ['y', 'm', 'd'].includes(k) ? (inp.value === '' ? '' : +inp.value) : inp.value;
+        e[k] = ['y', 'm', 'd', 'ey', 'em', 'ed'].includes(k) ? (inp.value === '' ? '' : +inp.value) : inp.value;
         if (k === 'precision') { if (e.precision !== 'none' && (e.y === '' || e.y == null)) e.y = new Date().getFullYear(); syncDateRow(); }
+        if (k === 'endPrecision' && !['none', 'now'].includes(e.endPrecision) && (e.ey === '' || e.ey == null || +e.ey < +e.y)) { e.ey = +e.y + (e.endPrecision === 'year' ? 1 : 0); e.em = e.m; e.ed = e.d; inp.closest('.ev-body').querySelector('[data-k=ey]').value = e.ey; }
+        if (['ey', 'em', 'ed', 'endPrecision', 'y', 'm', 'd'].includes(k)) syncDateRow();
         if (k === 'track') { changed(true); return; }
         if (['y', 'm', 'd', 'precision'].includes(k)) { sortEvents(); reorderListDom(); }
         head(); changed();
@@ -1550,6 +1673,10 @@ function applyPlay(force) {
   stage.classList.toggle('done', play.elapsed >= play.dur);
   stage.querySelectorAll('.trackline').forEach(pth => { pth.setAttribute('stroke-dasharray', '1 1'); pth.setAttribute('stroke-dashoffset', String(1 - lu)); });
   stage.querySelectorAll('rect.tile, circle.tile').forEach(t => t.classList.toggle('pending', +t.dataset.u > lu + 1e-4));
+  stage.querySelectorAll('.sp').forEach(sp => {
+    const u0 = +sp.dataset.u0, u1 = +sp.dataset.u1, f = Math.max(0, Math.min(1, (lu - u0) / ((u1 - u0) || 1)));
+    sp.setAttribute('stroke-dasharray', '1 1'); sp.setAttribute('stroke-dashoffset', String(1 - f));
+  });
   const key = shown + (play.elapsed >= play.dur ? 'done' : '');
   if (force || key !== play.shown) {
     const visible = new Set(play.order.slice(0, shown));
@@ -1597,7 +1724,7 @@ function stopPlay() {
   document.body.classList.remove('playing', 'paused');
   stage.classList.remove('playing', 'done');
   stage.querySelectorAll('.pending').forEach(n => n.classList.remove('pending'));
-  stage.querySelectorAll('.trackline').forEach(pth => { pth.removeAttribute('stroke-dasharray'); pth.removeAttribute('stroke-dashoffset'); });
+  stage.querySelectorAll('.trackline, .sp').forEach(pth => { pth.removeAttribute('stroke-dasharray'); pth.removeAttribute('stroke-dashoffset'); });
   unfocusCards(true);
 }
 function jump(dir) {
@@ -1631,7 +1758,7 @@ function orbitCardCanvas(e, tr, img) {
   const parts = []; let y = pad;
   if (img) { const ih = Math.round(inner * Math.max(.45, Math.min(1.2, img.naturalHeight / img.naturalWidth))); parts.push({ k: 'img', y, h: ih }); y += ih + 14; }
   if (S.showCredits && e.credit && img) { const cl = wrap(e.credit, 15, 400, 'normal', fam, inner, 2); parts.push({ k: 'credit', y, lines: cl }); y += cl.length * 19 + 8; }
-  const date = S.showTime && S.showCardDates ? fmtDate(e) : '';
+  const date = cardDateText(e);
   if (date) { parts.push({ k: 'date', y: y + 26, s: date }); y += 38; }
   const title = S.titleCase === 'upper' ? (e.title || '').toUpperCase() : (e.title || '');
   const tl = wrap(title, 36, 700, 'normal', fam, inner, 3); parts.push({ k: 'title', y, lines: tl }); y += tl.length * 43;
@@ -1780,6 +1907,17 @@ async function startOrbit(from) {
     const stem = new THREE.Line(new THREE.BufferGeometry().setFromPoints([ptOn(a, r), ptOn(a, r, 1)]), stemMat);
     ring.add(stem); ring.add(mesh);
     return { e, mesh, mat, stem, stemMat, a, r, W, H, below, scale: 0.8 };
+  });
+  // spans: a thicker, translucent arc hugging the ring from the event to its end
+  lastSpans.forEach(it => {
+    const k = evs.indexOf(it.e); if (k < 0) return;
+    const a0 = ang(norm[k]), a1 = ang(warp(it.u1)); if (a1 <= a0 + 0.01) return;
+    const r = radiusFor(it.e.track), tr = trackFor(it.e, tracks), pts = [];
+    const n = Math.max(8, Math.round((a1 - a0) / ARC * 240));
+    for (let i = 0; i <= n; i++) pts.push(ptOn(a0 + (a1 - a0) * i / n, r));
+    const arc = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), n * 2, 0.16, 10, false), new THREE.MeshBasicMaterial({ color: tr.color, transparent: true, opacity: ongoing(it.e) ? 0.3 : 0.42 }));
+    ring.add(arc);
+    if (!ongoing(it.e)) { const cap = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 12), new THREE.MeshBasicMaterial({ color: tr.color })); cap.position.copy(ptOn(a1, r)); ring.add(cap); }
   });
 
   // timing: hold on each event, glide to the next
@@ -1950,13 +2088,23 @@ function nearestU(pt) {
   for (let i = 0; i < pts.length; i++) { const d = (pts[i].x - pt.x) ** 2 + (pts[i].y - pt.y) ** 2; if (d < bd) { bd = d; best = i; } }
   return pts.length > 1 ? best / (pts.length - 1) : 0.5;
 }
-function setEventTime(e, t) {
-  if (e.precision === 'none') e.precision = 'year';
-  if (e.precision === 'year') { e.y = Math.round(t); return; }
-  if (e.precision === 'month') { const mi = Math.round(t * 12); e.y = Math.floor(mi / 12); e.m = mi - e.y * 12 + 1; return; }
+function setTimeFields(o, precision, t) {
+  // writes a time into o as {y, m, d} at the given precision
+  if (precision === 'year') { o.y = Math.round(t); return; }
+  if (precision === 'month') { const mi = Math.round(t * 12); o.y = Math.floor(mi / 12); o.m = mi - o.y * 12 + 1; return; }
   const di = Math.round(t * 372), y = Math.floor(di / 372), rem = di - y * 372, m = Math.min(11, Math.floor(rem / 31));
   const dim = new Date(y, m + 1, 0).getDate();
-  e.y = y; e.m = m + 1; e.d = Math.min(dim, rem - m * 31 + 1);
+  o.y = y; o.m = m + 1; o.d = Math.min(dim, rem - m * 31 + 1);
+}
+function setEventTime(e, t) {
+  if (e.precision === 'none') e.precision = 'year';
+  const t0 = tval(e), t1 = tend(e);
+  setTimeFields(e, e.precision, t);
+  // a span keeps its length: the end slides by the same amount as the start
+  if (t1 != null && !ongoing(e) && t0 != null) {
+    const o = {}; setTimeFields(o, e.endPrecision, t1 + (tval(e) - t0));
+    e.ey = o.y; if (o.m) e.em = o.m; if (o.d) e.ed = o.d;
+  }
 }
 function dateForU(e, u) {
   if (lastP.mode === 'date') return drag.frozen.t0 + u * (drag.frozen.t1 - drag.frozen.t0);
