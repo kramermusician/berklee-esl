@@ -905,8 +905,10 @@ function render() {
     let side = shared ? (sharedK++ % 2 ? 1 : -1) : two ? Math.sign(trackOff(e.track)) : (outward ? -1 : (k % 2 ? 1 : -1));
     if (S.shape === 'arc' && !two) side = -1;
     const card = buildCard(e, tr, { cw, ls, fam, ink, bg, k });
-    const box = placeCard(p, side, card, !two && !outward && S.shape !== 'arc', two ? gap / 2 + rlw / 2 + 8 : rlw * (candy ? .5 : 2) + (candy ? 10 : 0));
+    let box = placeCard(p, side, card, !two && !outward && S.shape !== 'arc', two ? gap / 2 + rlw / 2 + 8 : rlw * (candy ? .5 : 2) + (candy ? 10 : 0));
     placed.push(box);
+    // a Shift-dragged card keeps its date and sits where it was put; the others keep the spot it left
+    if (e.nudge) box = Object.assign({}, box, { x: box.x + e.nudge.x, y: box.y + e.nudge.y, ax: box.ax + e.nudge.x, ay: box.ay + e.nudge.y });
     el('line', { x1: p.x, y1: p.y, x2: box.ax, y2: box.ay, stroke: tr.color, 'stroke-width': 2, 'stroke-dasharray': S.cardStyle === 'plain' ? '4 4' : null, opacity: .8, class: 'ld', 'data-id': e.id }, leadersG);
     if (shared) {
       // a bridge across both lines, with each timeline's own marker at either end
@@ -973,9 +975,10 @@ function render() {
   lastLayout = vb;
   // the background rect is oversized so a zoomed-out or panned camera never shows the page behind it
   bgRect.setAttribute('x', vb.x - vb.w * 2); bgRect.setAttribute('y', vb.y - vb.h * 2); bgRect.setAttribute('width', vb.w * 5); bgRect.setAttribute('height', vb.h * 5);
-  if (cam) cam.home = vb; else stage.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  // during a Shift-drag the view holds still, so the card follows the pointer instead of the page re-fitting under it
+  if (cam) cam.home = vb; else stage.setAttribute('viewBox', drag && drag.vb ? drag.vb : `${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
   if (play) applyPlay(true);
-  applyZoom();
+  if (!(drag && drag.vb)) applyZoom();
   readabilityHint();
 }
 
@@ -1493,6 +1496,7 @@ function renderList() {
           ${e.image ? '<button class="btn small" data-a="nophoto">Remove photo</button>' : ''}
           <button class="btn small" data-a="up" ${i === 0 ? 'disabled' : ''}>↑</button>
           <button class="btn small" data-a="down" ${i === doc.events.length - 1 ? 'disabled' : ''}>↓</button>
+          ${e.nudge ? '<button class="btn small" data-a="unnudge" title="Undo Shift-drag: put the card back in its automatic spot">Reset card spot</button>' : ''}
           <button class="btn small" data-a="dup">Duplicate</button>
           <button class="btn small danger" data-a="del">Delete</button>
         </div>
@@ -1536,6 +1540,7 @@ function renderList() {
       if (a === 'nophoto') { e.image = null; e.credit = ''; }
       if (a === 'up' && idx > 0) [doc.events[idx - 1], doc.events[idx]] = [doc.events[idx], doc.events[idx - 1]];
       if (a === 'down' && idx < doc.events.length - 1) [doc.events[idx + 1], doc.events[idx]] = [doc.events[idx], doc.events[idx + 1]];
+      if (a === 'unnudge') delete e.nudge;
       if (a === 'dup') { const c = Object.assign({}, e, { id: uid() }); doc.events.splice(idx + 1, 0, c); selectedId = c.id; }
       if (a === 'del') {
         if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Click again to delete'; setTimeout(() => { b.classList.remove('armed'); b.textContent = 'Delete'; }, 2500); return; }
@@ -1968,6 +1973,30 @@ async function startOrbit(from) {
 
   const qInv = new THREE.Quaternion(), tmp = new THREE.Vector3();
   const INTRO = 2.6;
+  // the current card has to sit between the title and the play bar: shrink it if it is too tall to fit,
+  // then tilt the camera so neither end is hidden (a lower timeline's cards hang below the ring)
+  st.fitK = 1; st.adj = 0;
+  function keepCurInView(c, dt, lookBase) {
+    if (!c || st.curS == null) return;
+    const ndc = px => 1 - 2 * px / window.innerHeight;
+    const safeTop = ndc(head.getBoundingClientRect().bottom + 14), safeBot = ndc(bar.getBoundingClientRect().top - 18);
+    const base = 0.55 * K, h = c.H * st.curS;
+    // the card plus its stem down (or up) to the ring
+    const yHi = c.below ? 0 : base + h, yLo = c.below ? -(base + h) : 0;
+    const proj = y => ring.localToWorld(ptOn(c.a, c.r, y)).project(camera).y;
+    camera.lookAt(0, lookBase, R * 0.4); camera.updateMatrixWorld();
+    const top = proj(yHi), bot = proj(yLo), span = safeTop - safeBot;
+    const wantK = Math.max(0.3, Math.min(1, st.fitK * (top - bot > span * 0.96 ? span * 0.96 / (top - bot) : top - bot < span * 0.9 ? 1.04 : 1)));
+    st.fitK += (wantK - st.fitK) * Math.min(1, dt * 4);
+    let shift = 0; // in screen units (NDC), positive tilts the view up
+    if (top - bot > span) shift = (top + bot) / 2 - (safeTop + safeBot) / 2;
+    else if (top > safeTop) shift = top - safeTop;
+    else if (bot < safeBot) shift = bot - safeBot;
+    const L = camera.position.distanceTo(tmp.set(0, lookBase, R * 0.4));
+    const want = shift * Math.tan(camera.fov * Math.PI / 360) * L;
+    st.adj += (want - st.adj) * Math.min(1, dt * 5);
+    camera.lookAt(0, lookBase + st.adj, R * 0.4);
+  }
   function frame(nowMs) {
     const dt = Math.min(0.1, (nowMs - st.last) / 1000); st.last = nowMs;
     if (st.intro < INTRO) st.intro += dt;
@@ -1979,7 +2008,8 @@ async function startOrbit(from) {
     // aim so the ring plus the current card sit in the middle of the screen, however tall the card is
     const lookY = st.curTop != null ? st.curTop * 0.42 : 2.9 * K;
     st.look = st.look == null ? lookY : st.look + (lookY - st.look) * Math.min(1, dt * 4);
-    camera.lookAt(0, st.look - e * 0.3 * K, R * 0.4);
+    const lookBase = st.look - e * 0.3 * K;
+    camera.lookAt(0, lookBase, R * 0.4);
     // turn the ring so the current event sits at the front
     const want = -targetAngle(st.elapsed);
     st.rot += (want - st.rot) * Math.min(1, dt * 6);
@@ -1987,6 +2017,7 @@ async function startOrbit(from) {
     now.position.set(0, 0, cards.length && !two ? R : R); halo.position.copy(now.position);
     halo.scale.setScalar(1 + 0.15 * Math.sin(nowMs / 300));
     ring.updateMatrixWorld();
+    keepCurInView(cards[idxAt(st.elapsed)], dt, lookBase);
     qInv.copy(ring.quaternion).invert().multiply(camera.quaternion);
     const cur = idxAt(st.elapsed);
     const dist = camera.position.distanceTo(tmp.set(0, 0, R));
@@ -1995,13 +2026,13 @@ async function startOrbit(from) {
       const d = Math.atan2(Math.sin(c.a + st.rot), Math.cos(c.a + st.rot)); // 0 = front
       const isCur = k === cur;
       // the current card fills about half the screen height or 45% of its width, whichever comes first
-      const fitS = Math.min(0.5 * visH / c.H, 0.45 * visW / c.W, 2.6);
+      const fitS = Math.min(0.5 * visH / c.H, 0.45 * visW / c.W, 2.6) * (isCur ? st.fitK : 1);
       const targetS = isCur ? fitS : Math.min(0.7, fitS * 0.4);
       c.scale += (targetS - c.scale) * Math.min(1, dt * 7);
       const o = isCur ? 1 : Math.max(0.1, 0.8 - Math.abs(d) / 1.7);
       c.mat.opacity = o; c.stemMat.opacity = o * 0.8;
       const h = c.H * c.scale, base = 0.55 * K;
-      if (isCur) st.curTop = base + c.H * targetS;
+      if (isCur) { st.curTop = base + c.H * targetS; st.curS = targetS; }
       const cy = c.below ? -(base + h / 2) : base + h / 2;
       c.mesh.scale.setScalar(c.scale);
       c.mesh.position.copy(ptOn(c.a, c.r, cy));
@@ -2124,7 +2155,9 @@ stage.addEventListener('pointerdown', ev => {
   if (document.body.classList.contains('presenting') || ev.button !== 0) return;
   const g = ev.target.closest('.card'); if (!g || !lastP) return;
   const e = doc.events.find(x => x.id === g.dataset.id); if (!e) return;
+  const pt = svgPoint(ev);
   drag = { id: e.id, x: ev.clientX, y: ev.clientY, moved: false, u: null, startPos: new Map(lastP.pos),
+           shift: ev.shiftKey && !!pt, pt, nudge0: e.nudge || { x: 0, y: 0 }, vb: ev.shiftKey ? stage.getAttribute('viewBox') : null,
            frozen: lastP.mode === 'date' ? { t0: lastP.t0, t1: lastP.t1 } : null };
   ev.preventDefault();
 });
@@ -2134,11 +2167,20 @@ window.addEventListener('pointermove', ev => {
   drag.moved = true; selectedId = drag.id;
   const pt = svgPoint(ev); if (!pt) return;
   const e = doc.events.find(x => x.id === drag.id);
+  if (drag.shift) {
+    // Shift: move the card only, the date and the marker stay put
+    e.nudge = { x: Math.round(drag.nudge0.x + pt.x - drag.pt.x), y: Math.round(drag.nudge0.y + pt.y - drag.pt.y) };
+    dragTip.textContent = 'Moving the card only, the date stays';
+    dragTip.style.left = ev.clientX + 14 + 'px'; dragTip.style.top = ev.clientY + 14 + 'px'; dragTip.style.display = 'block';
+    stage.style.cursor = 'move';
+    changed();
+    return;
+  }
   const u = Math.max(0, Math.min(1, nearestU(pt)));
   drag.u = u;
   const t = dateForU(e, u);
   if (t != null) setEventTime(e, t);
-  dragTip.textContent = (t != null ? fmtDate(Object.assign({}, e, { dateLabel: '' })) : 'Move') + (e.dateLabel ? `  (shows "${e.dateLabel}")` : '');
+  dragTip.textContent = (t != null ? fmtDate(Object.assign({}, e, { dateLabel: '' })) : 'Move') + (e.dateLabel ? `  (shows "${e.dateLabel}")` : '') + '  · hold Shift to move the card only';
   dragTip.style.left = ev.clientX + 14 + 'px'; dragTip.style.top = ev.clientY + 14 + 'px'; dragTip.style.display = 'block';
   stage.style.cursor = 'grabbing';
   changed();
@@ -2149,6 +2191,7 @@ window.addEventListener('pointerup', () => {
   dragTip.style.display = 'none'; stage.style.cursor = '';
   if (!was.moved) return;
   suppressClick = true; setTimeout(() => { suppressClick = false; }, 50);
+  if (was.shift) { changed(true); toast('Card moved. Its date did not change. Reset card spot in the editor puts it back.'); return; }
   if (lastP.mode === 'even' && tval(doc.events.find(x => x.id === was.id)) == null) {
     // nothing to date against: just move it in the list to where it was dropped
     const e = doc.events.find(x => x.id === was.id);
